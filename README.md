@@ -92,13 +92,13 @@ NUHA منظومة تعليمية تجمع بين:
 
 ## تشغيل الإصدار القديم (للمرجع)
 
-ملف التطبيق: [`لعبه جديده.apk`](<لعبه جديده.apk>) — لوحتي الذكية، الإصدار 2.4.0، الحزمة `com.smartchild.app`.
+ملف التطبيق: [`legacy-app/louhati-v2.4.0.apk`](legacy-app/louhati-v2.4.0.apk) — لوحتي الذكية، الإصدار 2.4.0، الحزمة `com.smartchild.app`.
 
 المتطلبات: جهاز Android 7.0 (API 24) أو أحدث بمعمارية ARM64، أو محاكٍ ARM64، مع أداة `adb`. يتطلب التطبيق تسجيل دخول ولي الأمر.
 
 ```bash
 adb devices -l
-adb -s DEVICE_ID install -r "لعبه جديده.apk"
+adb -s DEVICE_ID install -r legacy-app/louhati-v2.4.0.apk
 adb -s DEVICE_ID shell am start -W -n com.smartchild.app/com.smartchild.app.MainActivity
 ```
 
@@ -110,7 +110,7 @@ adb -s DEVICE_ID shell am start -W -n com.smartchild.app/com.smartchild.app.Main
 NUHA/
 ├── README.md
 ├── LEGACY_APP_REFERENCE.md          مرجع الإصدار القديم
-├── لعبه جديده.apk                    الإصدار القديم (لوحتي الذكية)
+├── legacy-app/louhati-v2.4.0.apk    الإصدار القديم (لوحتي الذكية)
 ├── ‎التقرير الأول_ تقييم خطة المشروع_٠٩٢٥٣٤.pdf   خطة المشروع الأصلية
 └── output/pdf/                      المستندات النهائية المرسلة للعميل
 ```

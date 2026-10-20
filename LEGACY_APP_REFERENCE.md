@@ -6,7 +6,7 @@ The project owner confirmed that this APK is the old version and that the new ve
 
 ## 1. Sources and evidence boundaries
 
-- [Legacy APK](<لعبه جديده.apk>): package inspection and hands-on exploration.
+- [Legacy APK](legacy-app/louhati-v2.4.0.apk): package inspection and hands-on exploration.
 - [Original project report](<‎التقرير الأول_ تقييم خطة المشروع_٠٩٢٥٣٤.pdf>): a nine-page project plan, not proof of completed hardware or demonstrated outcomes.
 - Project-owner clarifications: the intended nine-game, screen-and-stylus design and the decision to replace the legacy app with Kotlin.
 
@@ -33,7 +33,7 @@ Unless explicitly qualified, descriptions of screen contents below are **observe
 
 | Item | Observed/tested detail |
 |---|---|
-| APK filename | `لعبه جديده.apk` |
+| APK filename | `legacy-app/louhati-v2.4.0.apk` (originally supplied as `لعبه جديده.apk`) |
 | Application label | لوحتي الذكية |
 | Version | `2.4.0` / version code `2010` |
 | Package | `com.smartchild.app` |
@@ -301,7 +301,7 @@ The following reproduces the commands used, with a placeholder instead of a priv
 
 ```sh
 adb devices -l
-adb -s DEVICE_ID install -r "لعبه جديده.apk"
+adb -s DEVICE_ID install -r legacy-app/louhati-v2.4.0.apk
 adb -s DEVICE_ID shell am start -W -n com.smartchild.app/com.smartchild.app.MainActivity
 ```
 
