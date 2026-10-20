@@ -12,9 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -25,9 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-
-/** Minimum size for any interactive control. Well above Android's 48dp baseline; to be validated on the table. */
-val NuhaMinTarget = 72.dp
 
 /**
  * Shared layout for an activity: one instruction at the top, the task in the middle,
@@ -86,23 +80,4 @@ fun TaskScaffold(
             content = actions,
         )
     }
-}
-
-@Composable
-fun NuhaPrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.heightIn(min = NuhaMinTarget),
-        contentPadding = ButtonDefaults.ContentPadding,
-    ) { Text(text) }
-}
-
-@Composable
-fun NuhaSecondaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    FilledTonalButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.heightIn(min = NuhaMinTarget),
-    ) { Text(text) }
 }

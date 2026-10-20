@@ -6,8 +6,8 @@ The project owner confirmed that this APK is the old version and that the new ve
 
 ## 1. Sources and evidence boundaries
 
-- [Legacy APK](legacy-app/louhati-v2.4.0.apk): package inspection and hands-on exploration.
-- [Original project report](<‎التقرير الأول_ تقييم خطة المشروع_٠٩٢٥٣٤.pdf>): a nine-page project plan, not proof of completed hardware or demonstrated outcomes.
+- [Legacy APK](<../legacy-app/louhati-v2.4.0.apk>): package inspection and hands-on exploration.
+- [Original project report](<project-plan/original-project-plan.pdf>): a nine-page project plan, not proof of completed hardware or demonstrated outcomes.
 - Project-owner clarifications: the intended nine-game, screen-and-stylus design and the decision to replace the legacy app with Kotlin.
 
 Evidence labels used throughout:
