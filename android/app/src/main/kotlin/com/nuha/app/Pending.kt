@@ -17,8 +17,11 @@ object Pending {
     val AgeRange = 2..6
     const val DefaultAge = 4
 
-    /** PLACEHOLDER OI-02: numeral system. Western digits until Western vs Arabic-Indic is decided; use this for every number shown. */
-    fun numeral(n: Int): String = n.toString()
+    /**
+     * PLACEHOLDER OI-02: numeral system. FR-SET-002 makes numerals a per-child setting; this is the default for new
+     * children and for screens with no child (onboarding, the adult area). Show numbers with [LocalNumerals].
+     */
+    val DefaultNumerals = Numerals.Western
 
     /** PLACEHOLDER OI-03: the guide's name. The product name stands in. */
     @DraftArabic const val GuideName = "نُهى"
@@ -32,10 +35,11 @@ object Pending {
     const val TokenSlots = 5
 
     /**
-     * PLACEHOLDER (SRS silent on prompt timing, a per-child setting in FR-SET-002): quiet active time before the
-     * prompt ladder steps up by itself.
+     * PLACEHOLDER (FR-SET-002 lists prompt delay as a per-child setting but gives no values): the choices, in seconds of
+     * quiet active time before the prompt ladder steps up by itself; 0 means never. The default is the middle one.
      */
-    const val PromptDelayMillis = 10_000L
+    val PromptDelayChoices = listOf(5, 10, 20, 0)
+    const val DefaultPromptDelaySeconds = 10
 
     /**
      * PLACEHOLDER (SRS silent on how prompts fade): a trial starts one level below the highest level the previous
@@ -43,8 +47,41 @@ object Pending {
      */
     fun fadedStart(previousLevel: Int): Int = if (previousLevel >= 2) previousLevel - 1 else 0
 
-    /** PLACEHOLDER (FR-SET-002 per-child setting, milestone 4): celebration intensity, "off", "gentle" or "lively"; gentle is the SRS default. */
-    const val CelebrationIntensity = "gentle"
+    /**
+     * PLACEHOLDER (FR-SET-002 lists target size but gives no values; NFR-ACC-003 sets 96–120 dp for primary targets):
+     * a scale on everything inside a task's play area.
+     */
+    val TargetScales = linkedMapOf("standard" to 1f, "large" to 1.15f)
+
+    /**
+     * PLACEHOLDER OI-14: motion for a new child while the system's animations are on. FR-SET-004 says follow the
+     * system setting; ui-style.md's calm default is reduced. With system animations off a new child starts at none.
+     */
+    const val DefaultMotion = "reduced"
+
+    /**
+     * PLACEHOLDER OI-14 / FR-SET-005: what each sensory starting point sets. ui-style.md names lively, gentle and muted
+     * but not their values. Voice stays on and music off in all three (FR-SET-006).
+     */
+    fun sensoryPreset(point: String, childId: Long, systemMotionOff: Boolean): com.nuha.app.data.ChildSettings {
+        val base = com.nuha.app.data.ChildSettings(childId)
+        val preset = when (point) {
+            "lively" -> base.copy(appearance = "colourful", motion = "full", effects = true, celebration = "lively")
+            "muted" -> base.copy(appearance = "muted", motion = "none", effects = false, celebration = "off")
+            else -> base.copy(appearance = "colourful", motion = DefaultMotion, effects = true, celebration = "gentle")
+        }
+        return if (systemMotionOff) preset.copy(motion = "none") else preset
+    }
+
+    /** PLACEHOLDER OI-14: the child-first onboarding has no adult step yet, so its child starts at this sensory point. */
+    const val OnboardingSensory = "gentle"
+
+    /**
+     * PLACEHOLDER OI-15: the gate. The adult holds the «للكبار» button this long, then types a number shown in words.
+     * A wrong number closes the gate, so random input has to hold again before it can try again.
+     */
+    const val GateHoldMillis = 2_000L
+    val GateNumbers = 100..999
 
     /** PLACEHOLDER (SRS silent): map stars per activity, one per completed session, up to three (FR-RWD-008). */
     fun starsFor(completedSessions: Int): Int = completedSessions.coerceIn(0, 3)
@@ -71,7 +108,7 @@ object Pending {
     /** PLACEHOLDER OI-10 (maze mechanic): "route", the child draws the ball's path (legacy); the plan describes "walls". */
     const val MazeMechanic = "route"
 
-    /** PLACEHOLDER (FR-GDN-001 timed mode is an adult setting, milestone 4): the garden runs untimed. */
+    /** PLACEHOLDER (FR-GDN-001 allows timing only as a separately chosen mode; the SRS lists no setting for it): the garden runs untimed. */
     const val GardenTimed = false
 
     /** PLACEHOLDER (FR-PAT-001 modes are separate; who picks is open): sessions alternate continuation and drawing. */

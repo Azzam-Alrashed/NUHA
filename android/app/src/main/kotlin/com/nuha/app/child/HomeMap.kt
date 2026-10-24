@@ -51,6 +51,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nuha.app.LocalNumerals
 import com.nuha.app.Pending
 import com.nuha.app.audio.Effects
 import com.nuha.app.audio.rememberEffects
@@ -99,13 +100,14 @@ private const val MAX_STARS = 3
  * mascot and up to three stars. The stop for the child's starting path is larger, ringed, and has the child's buddy
  * beside it (FR-HOM-005). One tap opens an activity (FR-HOM-004); «انتهيت» ends the session with no gate (FR-ADM-004).
  * All nine stops fit without scrolling (FR-HOM-003). Scenery lives here and on celebration screens only (FR-HOM-008).
+ * With [lock] set, the road shows only that stop, and the child starts there (FR-HOM-006).
  */
 @Composable
-fun HomeMap(child: ChildProfile, stars: (Activity) -> Int, onOpen: (Activity) -> Unit, onDone: () -> Unit, voice: Boolean, effects: Boolean) {
+fun HomeMap(child: ChildProfile, stars: (Activity) -> Int, onOpen: (Activity) -> Unit, onDone: () -> Unit, voice: Boolean, effects: Boolean, lock: Activity? = null) {
     val c = LocalIdentity.current
     val speech = rememberSpeech(voice)
     val sounds = rememberEffects(effects)
-    val current = Pending.startStop(child.startPath)
+    val current = lock ?: Pending.startStop(child.startPath)
     LaunchedEffect(Unit) { kotlinx.coroutines.delay(400); speech?.say(ChildCopy.mapGreeting(child.name)) }
 
     BoxWithConstraints(Modifier.fillMaxSize().background(c.scene.ground), contentAlignment = AbsoluteAlignment.TopLeft) {
@@ -130,6 +132,7 @@ fun HomeMap(child: ChildProfile, stars: (Activity) -> Int, onOpen: (Activity) ->
         }
 
         for (activity in Activity.entries) {
+            if (lock != null && activity != lock) continue
             val at = StopAt.getValue(activity)
             MapStop(
                 activity, activity == current, stars(activity), sounds, onOpen,
@@ -158,6 +161,7 @@ fun HomeMap(child: ChildProfile, stars: (Activity) -> Int, onOpen: (Activity) ->
 @Composable
 private fun MapStop(activity: Activity, current: Boolean, earned: Int, sounds: Effects?, onOpen: (Activity) -> Unit, modifier: Modifier) {
     val c = LocalIdentity.current
+    val numerals = LocalNumerals.current
     val reduced = LocalReducedMotion.current
     val hue = c.activityHue(activity)
     val size = (if (current) CURRENT_STOP else STOP).dp
@@ -170,7 +174,7 @@ private fun MapStop(activity: Activity, current: Boolean, earned: Int, sounds: E
         rememberInfiniteTransition(label = "Current stop").animateFloat(0f, 1f, infiniteRepeatable(tween(1400), RepeatMode.Reverse), label = "Ring").value
     } else 0f
     val description = buildString {
-        append(activity.label); append("، "); append(ChildCopy.stars(earned.coerceIn(0, MAX_STARS)))
+        append(activity.label); append("، "); append(ChildCopy.stars(earned.coerceIn(0, MAX_STARS), numerals))
         if (current) { append("، "); append(ChildCopy.StartHere) }
     }
     Column(

@@ -28,7 +28,7 @@ compose-material3 = { module = "androidx.compose.material3:material3" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
-ink-authoring-compose = { module = "androidx.ink:ink-authoring-compose", version.ref = "ink" }
+ink-authoring = { module = "androidx.ink:ink-authoring", version.ref = "ink" }
 ink-brush-compose = { module = "androidx.ink:ink-brush-compose", version.ref = "ink" }
 ink-geometry-compose = { module = "androidx.ink:ink-geometry-compose", version.ref = "ink" }
 ink-rendering = { module = "androidx.ink:ink-rendering", version.ref = "ink" }

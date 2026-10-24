@@ -37,9 +37,10 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nuha.app.Pending
+import com.nuha.app.LocalNumerals
 import com.nuha.app.audio.rememberEffects
 import com.nuha.app.child.ChildCopy
+import com.nuha.app.child.LocalChildSettings
 import com.nuha.app.data.ChildProfile
 import com.nuha.app.ui.identity.ChunkyButton
 import com.nuha.app.ui.identity.LocalIdentity
@@ -63,15 +64,16 @@ import kotlin.random.Random
 @Composable
 fun SessionCelebration(child: ChildProfile, filled: Int, slots: Int, onAgain: () -> Unit, onMap: () -> Unit, effects: Boolean) {
     val c = LocalIdentity.current
+    val numerals = LocalNumerals.current
     val reduced = LocalReducedMotion.current
     val sounds = rememberEffects(effects)
-    val intensity = Pending.CelebrationIntensity
+    val intensity = LocalChildSettings.current.celebration
     BoxWithConstraints(Modifier.fillMaxSize().background(c.scene.ground), contentAlignment = AbsoluteAlignment.TopLeft) {
         val w = maxWidth
         Canvas(Modifier.fillMaxSize().clearAndSetSemantics {}) { drawSky(c.scene) }
         if (!reduced && intensity != "off") Confetti(lively = intensity == "lively")
         Column(
-            Modifier.placeAt(w / 2, 70.dp, alignY = 0f).semantics(mergeDescendants = true) { contentDescription = "${ChildCopy.Bravo} ${ChildCopy.completed(filled, slots)}" },
+            Modifier.placeAt(w / 2, 70.dp, alignY = 0f).semantics(mergeDescendants = true) { contentDescription = "${ChildCopy.Bravo} ${ChildCopy.completed(filled, slots, numerals)}" },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
@@ -85,7 +87,7 @@ fun SessionCelebration(child: ChildProfile, filled: Int, slots: Int, onAgain: ()
                     }
                 }
             }
-            Text(ChildCopy.completed(filled, slots), color = c.ink, style = MaterialTheme.typography.headlineMedium.titleWeight().copy(fontSize = 34.sp))
+            Text(ChildCopy.completed(filled, slots, numerals), color = c.ink, style = MaterialTheme.typography.headlineMedium.titleWeight().copy(fontSize = 34.sp))
         }
         NuhaGuide(Modifier.placeAt(w * .2f, 560.dp).size(220.dp), gaze = Offset(.6f, -.4f))
         NuhaAvatar(child.avatar, Modifier.placeAt(w * .2f + 150.dp, 600.dp).size(110.dp), gaze = Offset(-.8f, -.3f))

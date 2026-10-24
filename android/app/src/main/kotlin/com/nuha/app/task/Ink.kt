@@ -1,5 +1,8 @@
 package com.nuha.app.task
 
+import android.annotation.SuppressLint
+import android.view.MotionEvent
+import android.view.View
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,7 +19,10 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
-import androidx.ink.authoring.compose.InProgressStrokes
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.ink.authoring.InProgressStrokeId
+import androidx.ink.authoring.InProgressStrokesFinishedListener
+import androidx.ink.authoring.InProgressStrokesView
 import androidx.ink.brush.Brush
 import androidx.ink.brush.InputToolType
 import androidx.ink.brush.StockBrushes
@@ -44,7 +50,54 @@ fun InkSurface(strokes: List<SavedStroke>, color: Color, widthDp: Float, enabled
         Canvas(Modifier.fillMaxSize()) {
             drawIntoCanvas { canvas -> rendered.forEach { renderer.draw(canvas.nativeCanvas, it, AffineTransform.IDENTITY) } }
         }
-        if (enabled) InProgressStrokes(defaultBrush = brush, onStrokesFinished = { done -> done.forEach { finished(it.toSaved(size)) } })
+        val current by rememberUpdatedState(brush)
+        if (enabled) AndroidView(
+            factory = { context ->
+                InProgressStrokesView(context).also { view ->
+                    // Drawn in the view hierarchy, not a front-buffered surface the board would cover; handed over at once.
+                    view.useHighLatencyRenderHelper = true
+                    view.handoffDebounceTimeMs = 0
+                    view.addFinishedStrokesListener(object : InProgressStrokesFinishedListener {
+                        override fun onStrokesFinished(strokes: Map<InProgressStrokeId, Stroke>) {
+                            strokes.values.forEach { finished(it.toSaved(size)) }
+                            view.removeFinishedStrokes(strokes.keys)
+                        }
+                    })
+                    view.setOnTouchListener(OnePointer(view) { current })
+                }
+            },
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+/**
+ * Feeds the live stroke one pointer at a time, without motion prediction. Ink's Compose wrapper always predicts, and
+ * its predictor stalled the main thread under a burst of injected random input (an ANR in the milestone 4 gate test).
+ */
+@SuppressLint("ClickableViewAccessibility")
+private class OnePointer(private val view: InProgressStrokesView, private val brush: () -> Brush) : View.OnTouchListener {
+    private var pointer = -1
+    private var stroke: InProgressStrokeId? = null
+
+    override fun onTouch(v: View, e: MotionEvent): Boolean {
+        when (e.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                v.requestUnbufferedDispatch(e)
+                pointer = e.getPointerId(0)
+                stroke = view.startStroke(e, pointer, brush())
+            }
+            MotionEvent.ACTION_MOVE -> stroke?.let { if (e.findPointerIndex(pointer) >= 0) view.addToStroke(e, pointer, it) }
+            MotionEvent.ACTION_POINTER_UP -> if (e.getPointerId(e.actionIndex) == pointer) finish(e)
+            MotionEvent.ACTION_UP -> finish(e)
+            MotionEvent.ACTION_CANCEL -> { stroke?.let { view.cancelStroke(it, e) }; stroke = null }
+        }
+        return true
+    }
+
+    private fun finish(e: MotionEvent) {
+        stroke?.let { view.finishStroke(e, pointer, it) }
+        stroke = null
     }
 }
 

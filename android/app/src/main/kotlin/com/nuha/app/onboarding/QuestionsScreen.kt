@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nuha.app.DraftArabic
+import com.nuha.app.LocalNumerals
 import com.nuha.app.Pending
 import com.nuha.app.audio.rememberEffects
 import com.nuha.app.audio.rememberSpeech
@@ -78,7 +79,7 @@ fun QuestionsScreen(model: OnboardingViewModel, onBack: () -> Unit, onFinish: ()
 private fun QuestionCard(model: OnboardingViewModel, index: Int, onAnswer: (Answer) -> Unit) {
     val c = LocalIdentity.current
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text("السؤال ${Pending.numeral(index + 1)} من ${Pending.numeral(Questions.size)}", style = MaterialTheme.typography.titleMedium.labelWeight(), color = c.ink)
+        Text("السؤال ${LocalNumerals.current.format(index + 1)} من ${LocalNumerals.current.format(Questions.size)}", style = MaterialTheme.typography.titleMedium.labelWeight(), color = c.ink)
         // One segment per question: answered ones filled, the current one wider.
         Row(Modifier.clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             for (i in Questions.indices) Box(

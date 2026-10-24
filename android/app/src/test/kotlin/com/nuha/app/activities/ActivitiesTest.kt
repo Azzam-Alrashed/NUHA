@@ -17,7 +17,7 @@ class ActivitiesTest {
 
     @Test fun everyActivityHasAPlanThatFillsTheBoard() {
         for (activity in Activity.entries) for (completed in 0..5) {
-            val plan = planFor(activity, completed)
+            val plan = planFor(activity, completed, Pending.DefaultNumerals)
             assertEquals(activity, plan.activity)
             assertEquals("$activity", plan.slots, plan.trials(7).size)
         }
@@ -25,7 +25,7 @@ class ActivitiesTest {
 
     @Test fun theSameSeedGivesTheSameTrials() {
         for (activity in Activity.entries) {
-            val plan = planFor(activity, 1)
+            val plan = planFor(activity, 1, Pending.DefaultNumerals)
             assertEquals("$activity", plan.trials(99).map { it.key }, plan.trials(99).map { it.key })
             assertEquals("$activity", plan.trials(99).map { it.instruction }, plan.trials(99).map { it.instruction })
         }
@@ -36,8 +36,8 @@ class ActivitiesTest {
         for (activity in Activity.entries) {
             val step = if (activity == Activity.Patterns) 2 else 1
             for (completed in 0..6) {
-                val before = settings(planFor(activity, completed).difficulty) - "level"
-                val after = settings(planFor(activity, completed + step).difficulty) - "level"
+                val before = settings(planFor(activity, completed, Pending.DefaultNumerals).difficulty) - "level"
+                val after = settings(planFor(activity, completed + step, Pending.DefaultNumerals).difficulty) - "level"
                 val changed = (before.keys + after.keys).filter { before[it] != after[it] }
                 assertTrue("$activity $completed: $changed", changed.size <= 1)
             }
@@ -46,7 +46,7 @@ class ActivitiesTest {
 
     @Test fun levelsMoveUpAndStopAtTheTop() {
         for (activity in Activity.entries) {
-            val levels = (0..8).map { settings(planFor(activity, it).difficulty).getValue("level").toInt() }
+            val levels = (0..8).map { settings(planFor(activity, it, Pending.DefaultNumerals).difficulty).getValue("level").toInt() }
             assertEquals("$activity", levels, levels.sorted())
             assertTrue("$activity", levels.last() > levels.first())
         }
@@ -54,10 +54,10 @@ class ActivitiesTest {
 
     @Test fun choiceItemsAlwaysOfferTheAnswer() {
         for (completed in 0..3) for (seed in 1L..20L) {
-            planFor(Activity.Emotions, completed).trials(seed).forEach { val i = it.item as EmotionItem; assertTrue(i.feeling in i.options); assertEquals(i.options.size, i.options.toSet().size) }
-            planFor(Activity.Patterns, completed).trials(seed).forEach { val i = it.item as PatternItem; assertTrue(i.answer in i.options) }
-            planFor(Activity.Letters, completed).trials(seed).forEach { val i = it.item as LetterItem; assertTrue(i.target in i.options) }
-            planFor(Activity.Environment, completed).trials(seed).forEach { val i = it.item as PlaceItem; assertTrue(i.places.any { p -> p.id in i.thing.accepted }) }
+            planFor(Activity.Emotions, completed, Pending.DefaultNumerals).trials(seed).forEach { val i = it.item as EmotionItem; assertTrue(i.feeling in i.options); assertEquals(i.options.size, i.options.toSet().size) }
+            planFor(Activity.Patterns, completed, Pending.DefaultNumerals).trials(seed).forEach { val i = it.item as PatternItem; assertTrue(i.answer in i.options) }
+            planFor(Activity.Letters, completed, Pending.DefaultNumerals).trials(seed).forEach { val i = it.item as LetterItem; assertTrue(i.target in i.options) }
+            planFor(Activity.Environment, completed, Pending.DefaultNumerals).trials(seed).forEach { val i = it.item as PlaceItem; assertTrue(i.places.any { p -> p.id in i.thing.accepted }) }
         }
     }
 
@@ -131,5 +131,13 @@ class ActivitiesTest {
         assertEquals("route", Pending.MazeMechanic)
         assertFalse(Pending.GardenTimed)
         assertEquals(listOf("continue", "draw", "continue"), (0..2).map(Pending::patternMode))
+    }
+
+    /** Balance and garden write their numbers in the child's numerals (FR-SET-002). */
+    @Test fun plansUseTheChildsNumerals() {
+        val balance = BalancePlan(0, com.nuha.app.Numerals.ArabicIndic).trials(5)
+        assertTrue(balance.all { t -> t.praise.none { it in '0'..'9' } && t.praise.any { it in '٠'..'٩' } })
+        assertTrue(GardenPlan(0, com.nuha.app.Numerals.ArabicIndic).trials(5).all { "١" in it.instruction })
+        assertTrue(GardenPlan(0, com.nuha.app.Numerals.Western).trials(5).all { "1" in it.instruction })
     }
 }

@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.*
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -46,15 +47,38 @@ data class ChildProfile(
 @Dao
 interface ChildDao {
     @Insert suspend fun insert(child: ChildProfile): Long
+    @Update suspend fun update(child: ChildProfile)
     @Query("SELECT * FROM child_profiles ORDER BY createdAt LIMIT 1")
     suspend fun first(): ChildProfile?
+    @Query("SELECT * FROM child_profiles WHERE id = :id")
+    suspend fun byId(id: Long): ChildProfile?
+    @Query("SELECT * FROM child_profiles ORDER BY createdAt")
+    fun observeAll(): Flow<List<ChildProfile>>
+    @Query("DELETE FROM child_profiles WHERE id = :id")
+    suspend fun delete(id: Long)
 }
 
-@Database(entities = [AppPreferences::class, ChildProfile::class, SessionRecord::class, TrialRecord::class], version = 4, exportSchema = false)
+@Database(entities = [AppPreferences::class, ChildProfile::class, SessionRecord::class, TrialRecord::class, ChildSettings::class], version = 5, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun preferences(): PreferencesDao
     abstract fun children(): ChildDao
     abstract fun records(): RecordsDao
+    abstract fun settings(): SettingsDao
+
+    /** Saves a new child and their settings, all or nothing; returns the child's id. */
+    suspend fun addChild(child: ChildProfile, settingsFor: (Long) -> ChildSettings): Long = withTransaction {
+        val id = children().insert(child)
+        settings().save(settingsFor(id))
+        id
+    }
+
+    /** Deletes a child with their settings and every session and trial recorded for them, all or nothing (FR-PRF-009). */
+    suspend fun deleteChild(id: Long) = withTransaction {
+        records().deleteTrials(id)
+        records().deleteSessions(id)
+        settings().delete(id)
+        children().delete(id)
+    }
     companion object {
         @Volatile private var instance: AppDatabase? = null
         private val AddChildProfiles = object : androidx.room.migration.Migration(1, 2) {
@@ -71,8 +95,11 @@ abstract class AppDatabase : RoomDatabase() {
         private val AddTrialDetail = object : androidx.room.migration.Migration(3, 4) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) { RecordsSchema.addMissesAndDetail.forEach(db::execSQL) }
         }
+        private val AddChildSettings = object : androidx.room.migration.Migration(4, 5) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) { SettingsSchema.create.forEach(db::execSQL) }
+        }
         /** Every migration, oldest first; tests open old databases through these. */
-        val Migrations = arrayOf(AddChildProfiles, AddActivityRecords, AddTrialDetail)
+        val Migrations = arrayOf(AddChildProfiles, AddActivityRecords, AddTrialDetail, AddChildSettings)
         fun build(context: android.content.Context, name: String): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, name).addMigrations(*Migrations).build()
         fun get(application: Application): AppDatabase = instance ?: synchronized(this) {

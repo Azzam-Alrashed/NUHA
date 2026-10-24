@@ -3,6 +3,7 @@ package com.nuha.app.data
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -12,7 +13,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * IR-STO-002: every schema change keeps existing data. Builds databases exactly as versions 1, 2 and 3 shipped them, opens
+ * IR-STO-002: every schema change keeps existing data. Builds databases exactly as versions 1 to 4 shipped them, opens
  * them through the app's migrations, and checks saved data survives and the new tables work. IR-STO-003: a trial saved
  * twice under one ID is kept once.
  */
@@ -50,6 +51,37 @@ class MigrationTest {
         firstChoice = "a", firstCorrect = true, firstIndependent = true, wrongAttempts = 0, helpLevel = 0, helpRequests = 0, outcome = "independent",
         activeMillis = 1200, startedAt = 1, endedAt = 2,
     )
+
+    private val v4TrialColumns = arrayOf(
+        "ALTER TABLE `trials` ADD COLUMN `misses` INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE `trials` ADD COLUMN `detail` TEXT",
+    )
+
+    /** FR-SET-002: each existing child gets settings that keep what the device preferences gave them. */
+    @Test fun version4GainsSettingsPerChildFromThePreferences() = runBlocking {
+        oldDatabase(
+            4, v1Preferences, v2Children, *v3Records, *v4TrialColumns,
+            "INSERT INTO app_preferences VALUES (1, 'muted', 0, 1, 0, 1, 1)",
+            "INSERT INTO child_profiles (name, avatar, age, answers, startPath, createdAt) VALUES ('Sara', 'bean', 5, 'nnnyynnnyy', 'attention', 10)",
+            "INSERT INTO child_profiles (name, avatar, age, answers, startPath, createdAt) VALUES ('Omar', 'sun', 4, 'nnnnnnnnnn', 'mixed', 20)",
+        )
+        val database = AppDatabase.build(context, name)
+        try {
+            val children = database.children().observeAll().first()
+            assertEquals(listOf("Sara", "Omar"), children.map { it.name })
+            for (child in children) {
+                val s = database.settings().get(child.id)!!
+                assertEquals("muted", s.appearance)
+                assertEquals("reduced", s.motion)
+                assertEquals(false, s.voice)
+                assertEquals("gentle", s.celebration)
+                assertEquals(null, s.mapLock)
+            }
+            assertEquals("muted", database.preferences().read()!!.appearance)
+        } finally {
+            database.close()
+        }
+    }
 
     @Test fun version3KeepsTrialsAndGainsMissesAndDetail() = runBlocking {
         oldDatabase(

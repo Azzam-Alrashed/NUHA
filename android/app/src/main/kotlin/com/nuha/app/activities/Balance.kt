@@ -42,6 +42,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nuha.app.DraftArabic
+import com.nuha.app.LocalNumerals
+import com.nuha.app.Numerals
 import com.nuha.app.Pending
 import com.nuha.app.child.Activity
 import com.nuha.app.child.activityHue
@@ -67,7 +69,7 @@ import kotlin.random.Random
 internal class BalanceItem(val a: Int, val b: Int, val options: List<Int>) { val sum get() = a + b }
 
 /** Levels change one factor at a time (FR-ACT-012): sums to 5, then to 8, then four choices instead of three. */
-internal class BalancePlan(completedSessions: Int) : ActivityPlan {
+internal class BalancePlan(completedSessions: Int, private val numerals: Numerals = Pending.DefaultNumerals) : ActivityPlan {
     private val level = Pending.levelFor(completedSessions, top = 2)
     private val maxSum = if (level == 0) 5 else 8
     private val choices = if (level < 2) 3 else 4
@@ -83,7 +85,7 @@ internal class BalancePlan(completedSessions: Int) : ActivityPlan {
             val b = sum - a
             val wrong = ((1..maxSum) - sum).shuffled(r).take(choices - 1)
             val options = (wrong + sum).shuffled(r)
-            val (na, nb, ns) = listOf(a, b, sum).map(Pending::numeral)
+            val (na, nb, ns) = listOf(a, b, sum).map(numerals::format)
             TrialSpec(
                 "sum-$i-$a+$b", "كم نضع في الكفّة الفارغة ليتوازن الميزان؟", "أحسنت! $na و$nb يساوي $ns. الميزان متوازن.",
                 "عُدّ النقاط: $na و$nb يساوي $ns. اضغط على $ns.", BalanceItem(a, b, options),
@@ -95,6 +97,7 @@ internal class BalancePlan(completedSessions: Int) : ActivityPlan {
 @Composable
 internal fun BalanceContent(scope: TaskScope) {
     val c = LocalIdentity.current
+    val numerals = LocalNumerals.current
     val hue = c.activityHue(Activity.Balance)
     val item = scope.spec.item as BalanceItem
     // The full pan (right, where reading starts) sits low until the scale balances.
@@ -126,8 +129,8 @@ internal fun BalanceContent(scope: TaskScope) {
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(32.dp)) {
-            for (n in item.options) AnswerTile("n$n", n == item.sum, scope, hue, Pending.numeral(n), Modifier.size(150.dp)) {
-                Text(Pending.numeral(n), color = c.ink, style = MaterialTheme.typography.displaySmall.buttonWeight().copy(fontSize = 64.sp, lineHeight = 72.sp))
+            for (n in item.options) AnswerTile("n$n", n == item.sum, scope, hue, numerals.format(n), Modifier.size(150.dp)) {
+                Text(numerals.format(n), color = c.ink, style = MaterialTheme.typography.displaySmall.buttonWeight().copy(fontSize = 64.sp, lineHeight = 72.sp))
             }
         }
     }
@@ -145,12 +148,13 @@ private fun Pan(modifier: Modifier, hue: Hue, content: @Composable () -> Unit) {
 /** A group of dots the child can tap to hear its count; inspecting is not an answer. */
 @Composable
 private fun Group(count: Int, hue: Hue, scope: TaskScope) {
-    val say = { scope.say(Pending.numeral(count)) }
+    val numerals = LocalNumerals.current
+    val say = { scope.say(numerals.format(count)) }
     Column(
         Modifier
             .background(Color.White, RoundedCornerShape(20.dp))
             .padding(10.dp)
-            .semantics(mergeDescendants = true) { role = Role.Button; contentDescription = Pending.numeral(count); onClick { say(); true } }
+            .semantics(mergeDescendants = true) { role = Role.Button; contentDescription = numerals.format(count); onClick { say(); true } }
             .pointerInput(count) { detectTapGestures(onPress = { say() }) },
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {

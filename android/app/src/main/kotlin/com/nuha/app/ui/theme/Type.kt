@@ -31,6 +31,8 @@ private fun variableFamily(res: Int, maxWeight: Int) = FontFamily(Weights.map { 
 // Baloo Bhaijaan 2 (400–800) is the rounded interface face from docs/research/ui-style.md (Typography);
 // Black renders at ExtraBold. Readex Pro (to 700) stays bundled until the on-device harakat test decides between them.
 private val InterfaceFamily = variableFamily(com.nuha.app.R.font.baloo_bhaijaan_2, 800)
+/** The adult area's face: Readex Pro, plainer than the child interface face (FR-ADM-001 separate theme). */
+val AdultFamily = variableFamily(com.nuha.app.R.font.readex_pro, 700)
 private fun TextStyle.arabic() = copy(fontFamily = InterfaceFamily, letterSpacing = 0.sp)
 /**
  * Learning content (letters, words and sentences the child is learning to read) is set in simplified Naskh, fully

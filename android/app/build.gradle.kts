@@ -49,7 +49,7 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
 
-    implementation(libs.ink.authoring.compose)
+    implementation(libs.ink.authoring)
     implementation(libs.ink.brush.compose)
     implementation(libs.ink.geometry.compose)
     implementation(libs.ink.rendering)

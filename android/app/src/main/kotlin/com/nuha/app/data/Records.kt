@@ -75,6 +75,10 @@ interface RecordsDao {
     suspend fun completedByActivity(childId: Long): List<ActivityCount>
     @Query("SELECT COUNT(*) FROM sessions WHERE childId = :childId AND activity = :activity AND status = 'completed'")
     suspend fun completedCount(childId: Long, activity: String): Int
+    @Query("DELETE FROM trials WHERE childId = :childId")
+    suspend fun deleteTrials(childId: Long)
+    @Query("DELETE FROM sessions WHERE childId = :childId")
+    suspend fun deleteSessions(childId: Long)
 }
 
 data class ActivityCount(val activity: String, val completed: Int)

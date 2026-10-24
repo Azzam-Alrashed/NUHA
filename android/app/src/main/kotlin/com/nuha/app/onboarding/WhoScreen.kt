@@ -26,6 +26,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nuha.app.DraftArabic
+import com.nuha.app.LocalNumerals
 import com.nuha.app.Pending
 import com.nuha.app.audio.rememberEffects
 import com.nuha.app.audio.rememberSpeech
@@ -39,7 +40,7 @@ import com.nuha.app.ui.theme.titleWeight
 
 @DraftArabic private const val PROMPT = "مَن سيلعب معي؟"
 private const val MAX_NAME = 20
-private val AvatarNames = mapOf(
+internal val AvatarNames = mapOf(
     "squircle" to "مربّع أخضر", "dome" to "قبّة زرقاء", "clover" to "برسيم وردي",
     "sun" to "شمس برتقالية", "bean" to "حبّة بنفسجية", "triangle" to "مثلث أرجواني",
 )
@@ -51,6 +52,7 @@ private val AvatarNames = mapOf(
 @Composable
 fun WhoScreen(model: OnboardingViewModel, onBack: () -> Unit, onNext: () -> Unit, voice: Boolean, effects: Boolean) {
     val c = LocalIdentity.current
+    val numerals = LocalNumerals.current
     val speech = rememberSpeech(voice)
     val sounds = rememberEffects(effects)
     val focus = LocalFocusManager.current
@@ -88,8 +90,8 @@ fun WhoScreen(model: OnboardingViewModel, onBack: () -> Unit, onNext: () -> Unit
                     for (age in Pending.AgeRange) ChoiceTile(
                         c.action, selected = model.age == age,
                         onSelect = { if (model.age != age) sounds?.pop(); model.age = age },
-                        description = "${Pending.numeral(age)} سنوات", modifier = Modifier.size(80.dp), corner = null,
-                    ) { Text(Pending.numeral(age), style = MaterialTheme.typography.headlineMedium.buttonWeight().copy(fontSize = 34.sp), color = c.ink) }
+                        description = "${numerals.format(age)} سنوات", modifier = Modifier.size(80.dp), corner = null,
+                    ) { Text(numerals.format(age), style = MaterialTheme.typography.headlineMedium.buttonWeight().copy(fontSize = 34.sp), color = c.ink) }
                 }
             }
         }

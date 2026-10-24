@@ -22,6 +22,8 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nuha.app.DraftArabic
+import com.nuha.app.LocalNumerals
+import com.nuha.app.Numerals
 import com.nuha.app.Pending
 import com.nuha.app.child.Activity
 import com.nuha.app.child.activityHue
@@ -54,7 +56,7 @@ private fun spotsFor(count: Int) = when (count) {
 }
 
 /** Levels change one factor at a time (FR-ACT-012): three, four, then five seeds. */
-internal class GardenPlan(completedSessions: Int) : ActivityPlan {
+internal class GardenPlan(completedSessions: Int, private val numerals: Numerals = Pending.DefaultNumerals) : ActivityPlan {
     private val level = Pending.levelFor(completedSessions, top = 2)
     private val count = level + 3
     override val activity = Activity.Garden
@@ -65,7 +67,7 @@ internal class GardenPlan(completedSessions: Int) : ActivityPlan {
         val r = Random(seed)
         return List(slots) { i ->
             TrialSpec(
-                "garden-$i", "ازرع الأزهار بالترتيب: ابدأ بالرقم ${Pending.numeral(1)}.", "أحسنت! نمت كل الأزهار بالترتيب.",
+                "garden-$i", "ازرع الأزهار بالترتيب: ابدأ بالرقم ${numerals.format(1)}.", "أحسنت! نمت كل الأزهار بالترتيب.",
                 "نبدأ بالرقم الأصغر، ثم الذي بعده.", GardenItem(count, spotsFor(count).shuffled(r)),
             )
         }
@@ -75,6 +77,7 @@ internal class GardenPlan(completedSessions: Int) : ActivityPlan {
 @Composable
 internal fun GardenContent(scope: TaskScope) {
     val c = LocalIdentity.current
+    val numerals = LocalNumerals.current
     val hue = c.activityHue(Activity.Garden)
     val item = scope.spec.item as GardenItem
     var next by remember(scope.trialNumber) { mutableIntStateOf(1) }
@@ -93,7 +96,7 @@ internal fun GardenContent(scope: TaskScope) {
             val spot = item.spots[n - 1]
             val grown = n < next || scope.solved
             AnswerTile(
-                "seed-$n", n == next, scope, hue, Pending.numeral(n),
+                "seed-$n", n == next, scope, hue, numerals.format(n),
                 Modifier.placeAt(w * spot.x, h * spot.y).size(150.dp), done = grown,
                 onAnswer = { input, at ->
                     when {
@@ -105,7 +108,7 @@ internal fun GardenContent(scope: TaskScope) {
                 },
             ) {
                 if (grown) Bloom(c, Modifier.size(110.dp))
-                else Text(Pending.numeral(n), color = c.ink, style = MaterialTheme.typography.displaySmall.buttonWeight().copy(fontSize = 64.sp, lineHeight = 72.sp))
+                else Text(numerals.format(n), color = c.ink, style = MaterialTheme.typography.displaySmall.buttonWeight().copy(fontSize = 64.sp, lineHeight = 72.sp))
             }
         }
     }

@@ -152,6 +152,17 @@ private val HighContrast = IdentityPalette(
     highContrast = true,
 )
 
+/**
+ * Motion levels (FR-SET-004, ui-style.md Motion). Reduced keeps touch responses but drops entrance, idle and celebration
+ * motion: confetti becomes a static ribbon and stars fade in instead of flying. None also drops the fades.
+ */
+enum class Motion(val id: String) {
+    Full("full"), Reduced("reduced"), None("none");
+    companion object { fun of(id: String) = entries.firstOrNull { it.id == id } ?: Reduced }
+}
+
+val LocalMotion = staticCompositionLocalOf { Motion.Reduced }
+/** True under reduced and none; most motion only needs this. */
 val LocalReducedMotion = staticCompositionLocalOf { true }
 val LocalIdentity = staticCompositionLocalOf { Colourful }
 fun paletteFor(mode: String) = when (mode) {

@@ -155,7 +155,10 @@ class TaskViewModel(
 
     fun flightLanded(id: Int) { if (flight?.id == id) flight = null }
 
-    /** After [Pending.PromptDelayMillis] of quiet active time, the ladder steps up by itself. */
+    /** Quiet active time before the ladder steps up by itself, from the child's settings; null never (FR-SET-002). */
+    var promptDelayMillis: Long? = Pending.DefaultPromptDelaySeconds * 1_000L
+
+    /** After [promptDelayMillis] of quiet active time, the ladder steps up by itself. */
     private fun startPrompter() {
         prompter?.cancel()
         prompter = viewModelScope.launch {
@@ -163,7 +166,8 @@ class TaskViewModel(
                 delay(250)
                 val t = engine.tracker ?: continue
                 if (paused || background || t.solved || busy || t.level >= Ladder.Model) continue
-                if (t.quietMillis() >= Pending.PromptDelayMillis) {
+                val wait = promptDelayMillis ?: continue
+                if (t.quietMillis() >= wait) {
                     t.stepUp(requested = false)
                     level = t.level
                     trial?.let { say(promptFor(level, it)) }
