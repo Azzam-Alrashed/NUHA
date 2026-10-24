@@ -1,4 +1,4 @@
-# Builds docs/client/NUHA_UI_UX_Style_Research.pdf from docs/research/ui-style.md,
+# Builds docs/client/NUHA_UI_UX_Style_Research.pdf from docs/research/legacy/ui-style-calm.md,
 # reusing the styling of the earlier client PDFs. Run from the repo root.
 from pathlib import Path
 base=Path('tools/pdf/build_legacy_reference.py').read_text()
@@ -31,9 +31,10 @@ def fmt(s):
   s=s.replace(f'LINKTOKEN{j}X',f'<link href="{html.escape(u,quote=True)}" color="{TEAL}"><u>{oldfmt(t)}</u></link>')
  return s
 def para(t,style='BodyText'):return Paragraph(fmt(t),styles[style])
-md=Path('docs/research/ui-style.md').read_text().splitlines()
+md=Path('docs/research/legacy/ui-style-calm.md').read_text().splitlines()
 headline=md[0].lstrip('# ').strip()
-body=md[1:]
+# The legacy banner is repo-only; the delivered PDF predates it.
+body=[l for l in md[1:] if not l.startswith('> **Legacy.**')]
 story=[Spacer(1,75),para('NUHA','Heading1'),para('UI and UX Style Research for the New Version','Heading1'),Spacer(1,12),
  para('Colour • Arabic type • Illustration • Interaction • Motion and sound • Rewards','Heading3'),
  para('Client research brief | 20 October 2026'),Spacer(1,25),

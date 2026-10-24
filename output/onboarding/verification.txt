@@ -1,0 +1,4 @@
+Changed settings: [('', 'false', 'false', ''), ('', 'false', 'false', ''), ('', 'true', 'false', ''), ('', 'false', 'false', ''), ('', 'false', 'false', ''), ('', 'true', 'false', ''), ('', 'false', 'false', '')]
+Restored after process restart: [('', 'false', 'false', ''), ('', 'false', 'false', ''), ('', 'true', 'false', ''), ('', 'false', 'false', ''), ('', 'false', 'false', ''), ('', 'true', 'false', ''), ('', 'false', 'false', '')]
+Finish and completion persistence passed
+All three screens captured at 1.5x; settings overflow captured

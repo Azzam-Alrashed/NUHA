@@ -1,32 +1,26 @@
 package com.nuha.app
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import com.nuha.app.lab.LabHomeScreen
-import com.nuha.app.lab.ink.TraceExperimentScreen
-import com.nuha.app.lab.layout.LayoutExperimentScreen
-import com.nuha.app.lab.offline.OfflineExperimentScreen
-import com.nuha.app.lab.select.SelectionExperimentScreen
-
-object Routes {
-    const val LAB = "lab"
-    const val TRACE = "lab/trace"
-    const val SELECT = "lab/select"
-    const val LAYOUT = "lab/layout"
-    const val OFFLINE = "lab/offline"
-}
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nuha.app.data.PreferencesViewModel
+import com.nuha.app.ui.theme.NuhaTheme
 
 @Composable
 fun NuhaApp() {
-    val nav = rememberNavController()
-    val back: () -> Unit = { nav.popBackStack() }
-    NavHost(navController = nav, startDestination = Routes.LAB) {
-        composable(Routes.LAB) { LabHomeScreen(onOpen = { nav.navigate(it) }) }
-        composable(Routes.TRACE) { TraceExperimentScreen(onBack = back) }
-        composable(Routes.SELECT) { SelectionExperimentScreen(onBack = back) }
-        composable(Routes.LAYOUT) { LayoutExperimentScreen(onBack = back) }
-        composable(Routes.OFFLINE) { OfflineExperimentScreen(onBack = back) }
+    val model: PreferencesViewModel = viewModel()
+    val preferences by model.preferences.collectAsStateWithLifecycle()
+    val error by model.error.collectAsStateWithLifecycle()
+    NuhaTheme(appearance = preferences?.appearance ?: "colourful", reducedMotion = preferences?.reducedMotion ?: true) {
+        // Placeholder until the first rebuilt screen lands.
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(if (error) "تعذّر تحميل الإعدادات. أعد فتح التطبيق للمحاولة مجدداً." else "نُهى")
+        }
     }
 }
