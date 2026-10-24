@@ -1,11 +1,7 @@
 package com.nuha.app.onboarding
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.absoluteOffset
@@ -20,10 +16,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,13 +29,8 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.onClick
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -55,18 +42,14 @@ import com.nuha.app.ui.identity.NuhaGuide
 import com.nuha.app.ui.identity.NuhaPictogram
 import com.nuha.app.ui.theme.buttonWeight
 import com.nuha.app.ui.theme.titleWeight
-import kotlinx.coroutines.launch
-
-/** How long an adult holds the corner gate to open settings. Long presses are not used anywhere in child mode. */
-private const val GATE_HOLD_MILLIS = 3000
 
 /**
  * Onboarding, screen 1: the child meets the flower guide at the start of the road.
- * One action starts; adults reach settings through the held gate in the corner.
+ * One action starts.
  * Positions are fractions of the screen, from the 640×400 sketch, so the 16:10 table and tablets share one layout.
  */
 @Composable
-fun WelcomeScreen(onStart: () -> Unit, onOpenAdult: () -> Unit, modifier: Modifier = Modifier) {
+fun WelcomeScreen(onStart: () -> Unit, modifier: Modifier = Modifier) {
     val c = LocalIdentity.current
     // Scene positions are absolute (left-based) so the road reads right-to-left whatever the layout direction.
     BoxWithConstraints(modifier.fillMaxSize().background(c.scene.ground), contentAlignment = AbsoluteAlignment.TopLeft) {
@@ -90,7 +73,6 @@ fun WelcomeScreen(onStart: () -> Unit, onOpenAdult: () -> Unit, modifier: Modifi
         )
 
         Box(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp)) {
-            AdultGate(onOpenAdult, Modifier.align(AbsoluteAlignment.TopLeft))
             ChunkyButton(
                 "هيّا نبدأ", onStart,
                 Modifier.align(Alignment.BottomCenter).height(112.dp).widthIn(min = 340.dp),
@@ -169,47 +151,4 @@ private fun SpeechBubble(text: String, tailFromRight: Dp, modifier: Modifier) {
     ) {
         Text(text, style = MaterialTheme.typography.displaySmall.titleWeight().copy(fontSize = 52.sp, lineHeight = 76.sp), color = c.ink)
     }
-}
-
-/** Adult-only corner control: hold for [GATE_HOLD_MILLIS] while a ring fills. TalkBack users get a direct action. */
-@Composable
-private fun AdultGate(onOpen: () -> Unit, modifier: Modifier) {
-    val c = LocalIdentity.current
-    val open by rememberUpdatedState(onOpen)
-    val progress = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
-    Box(
-        modifier
-            .size(80.dp)
-            .semantics {
-                role = Role.Button
-                contentDescription = "إعدادات الكبار. اضغط مطوّلاً ثلاث ثوانٍ"
-                onClick { open(); true }
-            }
-            .pointerInput(Unit) {
-                detectTapGestures(onPress = {
-                    val hold = scope.launch {
-                        progress.animateTo(1f, tween(GATE_HOLD_MILLIS, easing = LinearEasing))
-                        open()
-                    }
-                    tryAwaitRelease()
-                    hold.cancel()
-                    progress.snapTo(0f)
-                })
-            }
-            .drawBehind {
-                drawCircle(c.scene.gate)
-                val ring = 6.dp.toPx()
-                if (progress.value > 0f) drawArc(
-                    c.scene.gateIcon, -90f, 360f * progress.value, false,
-                    Offset(ring / 2, ring / 2), Size(size.width - ring, size.height - ring), style = Stroke(ring, cap = StrokeCap.Round),
-                )
-                // Padlock: body and shackle.
-                val u = size.width / 80f
-                drawRoundRect(c.scene.gateIcon, Offset(26 * u, 38 * u), Size(28 * u, 22 * u), CornerRadius(6 * u))
-                drawArc(c.scene.gateIcon, 180f, 180f, false, Offset(30 * u, 24 * u), Size(20 * u, 24 * u), style = Stroke(5 * u))
-                drawLine(c.scene.gateIcon, Offset(30 * u, 36 * u), Offset(30 * u, 40 * u), 5 * u)
-                drawLine(c.scene.gateIcon, Offset(50 * u, 36 * u), Offset(50 * u, 40 * u), 5 * u)
-            },
-    )
 }

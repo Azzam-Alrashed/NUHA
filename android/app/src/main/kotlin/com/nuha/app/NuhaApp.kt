@@ -29,10 +29,10 @@ fun NuhaApp() {
         when {
             // Wait for the saved appearance so a muted child never sees the colourful default first.
             preferences == null -> Placeholder(if (error) "تعذّر تحميل الإعدادات. أعد فتح التطبيق للمحاولة مجدداً." else "")
-            screen == "welcome" -> WelcomeScreen(onStart = { screen = "next" }, onOpenAdult = { screen = "adult" })
+            screen == "welcome" -> WelcomeScreen(onStart = { screen = "next" })
             else -> {
                 BackHandler { screen = "welcome" }
-                Placeholder(if (screen == "adult") "إعدادات الكبار قيد البناء" else "الشاشة التالية قيد البناء")
+                Placeholder("الشاشة التالية قيد البناء")
             }
         }
     }

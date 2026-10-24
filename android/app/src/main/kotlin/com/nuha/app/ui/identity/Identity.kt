@@ -63,8 +63,6 @@ data class Scene(
     val road: Color,
     val dash: Color,
     val tileLip: Color,
-    val gate: Color,
-    val gateIcon: Color,
 )
 
 /**
@@ -108,7 +106,7 @@ private val Colourful = IdentityPalette(
     ink = Color(0xFF1E2A4A),
     paper = Color(0xFFFFF8EE),
     // Sunny ground of the Ladybug road on the moodboard.
-    scene = Scene(Color(0xFFFFD866), Color(0xFFFFE08A), Color(0xFFFFEDB0), Color.White, Color(0xFFEADBA8), Color.White.copy(alpha = .6f), Color(0xFF9C6D34)),
+    scene = Scene(Color(0xFFFFD866), Color(0xFFFFE08A), Color(0xFFFFEDB0), Color.White, Color(0xFFEADBA8)),
     amethyst = hue(0xFF9956DE, 0xFF7340A6, WHITE, 0xFF9755DC, 0xFFEBDDF8, largeOnly = true),
     slateBlue = hue(0xFF7274ED, 0xFF5657B2, WHITE, 0xFF686AD8, 0xFFE3E3FB, largeOnly = true),
     summerSky = hue(0xFF1FA7E1, 0xFF1D9ACF, INK, 0xFF187FAB, 0xFFD2EDF9),
@@ -121,7 +119,7 @@ private val Colourful = IdentityPalette(
 
 // Each fill moved 55% toward its tint (sRGB mix); lips, deep shades and tints unchanged; ink text on every fill.
 private val Muted = Colourful.copy(
-    scene = Scene(Color(0xFFFFEDBE), Color(0xFFFFF3D6), Color(0xFFFFF8E8), Color.White, Color(0xFFE6DCC0), Color.White.copy(alpha = .7f), Color(0xFF9C6D34)),
+    scene = Scene(Color(0xFFFFEDBE), Color(0xFFFFF3D6), Color(0xFFFFF8E8), Color.White, Color(0xFFE6DCC0)),
     amethyst = hue(0xFFC6A0EC, 0xFF7340A6, INK, 0xFF9755DC, 0xFFEBDDF8),
     slateBlue = hue(0xFFB0B1F5, 0xFF5657B2, INK, 0xFF686AD8, 0xFFE3E3FB),
     summerSky = hue(0xFF81CEEE, 0xFF1D9ACF, INK, 0xFF187FAB, 0xFFD2EDF9),
@@ -136,7 +134,7 @@ private val Muted = Colourful.copy(
 private val HighContrast = IdentityPalette(
     ink = Color(0xFF1E2A4A),
     paper = Color(0xFFFFFFFF),
-    scene = Scene(Color.White, Color.White, Color(0xFFE4E7EE), Color(0xFF1E2A4A), Color(0xFF1E2A4A), Color(0xFFE4E7EE), Color(0xFF1E2A4A)),
+    scene = Scene(Color.White, Color.White, Color(0xFFE4E7EE), Color(0xFF1E2A4A), Color(0xFF1E2A4A)),
     amethyst = hue(0xFF9755DC, INK, WHITE, 0xFF9755DC, WHITE),
     slateBlue = hue(0xFF686AD8, INK, WHITE, 0xFF686AD8, WHITE),
     summerSky = hue(0xFF187FAB, INK, WHITE, 0xFF187FAB, WHITE),
