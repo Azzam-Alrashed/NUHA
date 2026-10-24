@@ -224,7 +224,8 @@ fun pressSink(pressed: Boolean, lip: Dp): Dp {
 
 /**
  * Chunky pill button. The tap fires on touch-down (debounced), the face sinks by the lip height,
- * and neither the hit area nor neighbouring layout moves. Primary: hue fill; secondary: hue tint.
+ * and neither the hit area nor neighbouring layout moves. Primary: hue fill; secondary: hue tint. Disabled: the tint
+ * face with faint ink, rather than fading the whole button into whatever lies behind it.
  */
 @Composable
 fun ChunkyButton(
@@ -243,12 +244,11 @@ fun ChunkyButton(
     var lastFired by remember { mutableLongStateOf(0L) }
     val fire by rememberUpdatedState(onClick)
     val sink = pressSink(pressed, lip)
-    val ink = if (secondary) c.ink else hue.onFill
+    val ink = when { !enabled -> c.ink.copy(alpha = .38f); secondary -> c.ink; else -> hue.onFill }
     ChunkySurface(
-        hue, if (secondary) hue.tint else hue.fill,
+        hue, if (secondary || !enabled) hue.tint else hue.fill,
         modifier
             .heightIn(min = 72.dp)
-            .graphicsLayer { alpha = if (enabled) 1f else .45f }
             .semantics(mergeDescendants = true) {
                 role = Role.Button
                 onClick { if (enabled) fire(); enabled }
@@ -275,17 +275,20 @@ fun ChunkyButton(
     }
 }
 
-/** Selected-state badge: a check in the face colour on an onFill disc, so it never relies on hue alone. */
+/**
+ * Selected-state badge: a white check on a disc in the hue's lip, so it never relies on hue alone. Lips are at
+ * least 3:1 against paper and tints in every mode (ink in high contrast), so the badge stays visible on any face.
+ */
 @Composable
 fun CheckBadge(hue: Hue, modifier: Modifier = Modifier) {
-    Canvas(modifier.size(28.dp).clearAndSetSemantics {}) {
-        drawCircle(hue.onFill)
+    Canvas(modifier.size(32.dp).clearAndSetSemantics {}) {
+        drawCircle(hue.lip)
         val tick = Path().apply {
             moveTo(size.width * .28f, size.height * .53f)
             lineTo(size.width * .44f, size.height * .68f)
             lineTo(size.width * .74f, size.height * .34f)
         }
-        drawPath(tick, hue.fill, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round))
+        drawPath(tick, Color.White, style = Stroke(3.5.dp.toPx(), cap = StrokeCap.Round))
     }
 }
 
@@ -424,6 +427,63 @@ fun NuhaGuide(modifier: Modifier = Modifier, gaze: Offset = Offset.Zero, descrip
     }
 }
 
+/** The shape buddies a child can pick as their avatar, in the order shown. Shapes avoid questions of dress and gender. */
+val AvatarKinds = listOf("squircle", "dome", "clover", "sun", "bean", "triangle")
+
+/** Each avatar keeps one hue everywhere it appears. */
+fun IdentityPalette.avatarHue(kind: String): Hue = when (kind) {
+    "squircle" -> pastelGreen
+    "dome" -> summerSky
+    "clover" -> illusion
+    "sun" -> texasRose
+    "bean" -> slateBlue
+    else -> amethyst
+}
+
+/**
+ * A shape buddy: a flat body in its hue with the guide's eyes and smile and no limbs, in a 100×100 content box.
+ * [gaze] (-1..1 per axis) moves the pupils.
+ */
+@Composable
+fun NuhaAvatar(kind: String, modifier: Modifier = Modifier, gaze: Offset = Offset.Zero) {
+    val c = LocalIdentity.current
+    val h = c.avatarHue(kind)
+    Canvas(modifier.clearAndSetSemantics {}) {
+        val s = min(size.width, size.height) / 100f
+        with(drawContext.canvas) { save(); translate((size.width - 100*s)/2, (size.height - 100*s)/2); scale(s, s) }
+        groundShadow(h.lip, 50f toO 94f, 64f)
+        val brush = Brush.verticalGradient(listOf(h.fill.lifted(c.lift), h.fill), 10f, 92f)
+        var faceY = 50f
+        when (kind) {
+            "squircle" -> drawRoundRect(brush, Offset(16f, 18f), Size(68f, 70f), CornerRadius(26f))
+            "dome" -> { drawPath(Path().apply { moveTo(18f, 90f); lineTo(18f, 50f); cubicTo(18f, 6f, 82f, 6f, 82f, 50f); lineTo(82f, 90f); close() }, brush); faceY = 52f }
+            "clover" -> drawPath(Path().apply {
+                for ((x, y) in listOf(34f to 36f, 66f to 36f, 34f to 68f, 66f to 68f)) addOval(androidx.compose.ui.geometry.Rect(Offset(x, y), 20f))
+                addOval(androidx.compose.ui.geometry.Rect(Offset(50f, 52f), 22f))
+            }, brush)
+            "sun" -> drawPath(Path().apply {
+                addOval(androidx.compose.ui.geometry.Rect(Offset(50f, 52f), 31f))
+                for (i in 0 until 10) { val a = i * PI / 5; addOval(androidx.compose.ui.geometry.Rect(Offset(50f + (34 * cos(a)).toFloat(), 52f + (34 * sin(a)).toFloat()), 9f)) }
+            }, brush)
+            "bean" -> rotate(-10f, 50f toO 52f) { drawOval(brush, Offset(15f, 14f), Size(70f, 78f)) }
+            else -> {
+                // Rounded triangle: the fill plus a thick round-joined stroke of the same colour softens the corners.
+                val tri = Path().apply { moveTo(50f, 20f); lineTo(84f, 82f); lineTo(16f, 82f); close() }
+                drawPath(tri, brush); drawPath(tri, brush, style = Stroke(16f, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+                faceY = 60f
+            }
+        }
+        val look = Offset(gaze.x.coerceIn(-1f, 1f) * 3f, gaze.y.coerceIn(-1f, 1f) * 3f + .6f)
+        for (x in listOf(40f, 60f)) {
+            drawOval(Color.White, Offset(x - 8.5f, faceY - 10f), Size(17f, 19f))
+            drawCircle(c.ink, 5.2f, Offset(x, faceY) + look)
+            drawCircle(Color.White, 1.5f, Offset(x + 1.6f, faceY - 2f) + look)
+        }
+        drawPath(Path().apply { moveTo(45f, faceY + 13f); quadraticTo(50f, faceY + 18f, 55f, faceY + 13f) }, c.ink, style = Stroke(2.6f, cap = StrokeCap.Round))
+        drawContext.canvas.restore()
+    }
+}
+
 /**
  * Activity pictograms in a single colour, for drawing on a hue fill. Callers pass the hue's onFill,
  * which is at least 4.5:1 against the fill (3:1 for large-only hues), so the meaning survives every mode.
@@ -448,6 +508,12 @@ fun NuhaPictogram(kind: String, color: Color, modifier: Modifier = Modifier) {
                 drawPath(book, color, style = stroke); line(50f toO 30f, 50f toO 78f, 5f)
                 drawArc(color, 0f, 180f, false, Offset(22f,40f), Size(22f,16f), style = Stroke(5f, cap = StrokeCap.Round)); drawCircle(color, 3.5f, 33f toO 64f)
                 line(58f toO 44f, 76f toO 44f, 5f); line(58f toO 56f, 72f toO 56f, 5f)
+            }
+            // Attention and movement: a target with a steady centre.
+            "focus" -> {
+                drawCircle(color, 34f, 50f toO 50f, style = stroke)
+                drawCircle(color, 19f, 50f toO 50f, style = stroke)
+                drawCircle(color, 7f, 50f toO 50f)
             }
             // Emotions: a happy face and a small calm one.
             "emotions" -> {

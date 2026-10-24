@@ -71,9 +71,6 @@ private const val GREETING = "أهلاً! أنا نُهى"
 /** Quiet time before the guide looks at the start button and the button bobs once. */
 private const val INVITE_AFTER_MILLIS = 5000L
 private const val GUIDE_SIZE = 280
-private const val BUTTON_HEIGHT = 108
-/** Distance from the bubble's right edge to its tail, so the tail can sit over the guide. */
-private val BubbleTailInset = 92.dp
 
 /**
  * Onboarding, screen 1: the child meets the flower guide at the start of the road. One action starts.
@@ -157,6 +154,7 @@ fun WelcomeScreen(onStart: () -> Unit, voice: Boolean, effects: Boolean, modifie
 
         val bobPx = with(LocalDensity.current) { 14.dp.toPx() }
         Box(Modifier.fillMaxSize().navigationBarsPadding().padding(bottom = 24.dp), contentAlignment = AbsoluteAlignment.BottomLeft) {
+            StepDots(0, Modifier.placeAt(w / 2, -(BUTTON_HEIGHT / 2).dp).graphicsLayer { alpha = buttonIn.value })
             ChunkyButton(
                 "هيّا نبدأ",
                 onClick = {
@@ -173,7 +171,7 @@ fun WelcomeScreen(onStart: () -> Unit, voice: Boolean, effects: Boolean, modifie
                     }
                 },
                 modifier = Modifier
-                    .placeAt(guideX, 0.dp, alignY = 1f)
+                    .placeAt(w * PRIMARY_X, 0.dp, alignY = 1f)
                     .height(BUTTON_HEIGHT.dp)
                     .widthIn(min = 320.dp)
                     .graphicsLayer {
@@ -186,16 +184,7 @@ fun WelcomeScreen(onStart: () -> Unit, voice: Boolean, effects: Boolean, modifie
     }
 }
 
-/**
- * Places the element so the point ([alignX], [alignY]) of its own box lands on ([x], [y]), in absolute
- * (left-based) coordinates. It reports zero size, so siblings in a Box are unaffected.
- */
-private fun Modifier.placeAt(x: Dp, y: Dp, alignX: Float = .5f, alignY: Float = .5f) = layout { measurable, constraints ->
-    val p = measurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
-    layout(0, 0) { p.place((x.roundToPx() - alignX * p.width).toInt(), (y.roundToPx() - alignY * p.height).toInt()) }
-}
-
-/** Sun, hills, clouds, the road and roadside details: everything decorative, drawn once in sketch coordinates. */
+/** The sky, the road and roadside details: everything decorative, drawn once in sketch coordinates. */
 @Composable
 private fun Scenery(modifier: Modifier) {
     val c = LocalIdentity.current
@@ -203,11 +192,7 @@ private fun Scenery(modifier: Modifier) {
     Canvas(modifier.clearAndSetSemantics {}) {
         fun p(x: Float, y: Float) = Offset(size.width * x / 640f, size.height * y / 400f)
         val u = size.width / 640f
-        drawCircle(scene.sun, 46f * u, p(622f, 14f))
-        drawOval(scene.hill, Offset(-140f * u, 330f * u), Size(400f * u, 200f * u))
-        drawOval(scene.hill, Offset(170f * u, 360f * u), Size(300f * u, 160f * u))
-        cloud(scene.cloud, p(214f, 62f), 20f * u)
-        cloud(scene.cloud, p(318f, 40f), 13f * u)
+        drawSky(scene)
 
         val road = Path().apply {
             p(660f, 330f).let { moveTo(it.x, it.y) }
@@ -228,12 +213,6 @@ private fun Scenery(modifier: Modifier) {
         bloom(c.illusion, c.texasRose.fill, p(440f, 186f), 5f * u)
         for ((pt, r) in listOf(p(196f, 362f) to 6f, p(214f, 368f) to 4f, p(512f, 150f) to 5f)) drawOval(scene.tileLip, pt - Offset(r * u, r * .6f * u), Size(2 * r * u, 1.2f * r * u))
     }
-}
-
-private fun DrawScope.cloud(color: Color, center: Offset, r: Float) {
-    drawRoundRect(color, center + Offset(-1.6f * r, -.2f * r), Size(3.2f * r, 1.2f * r), CornerRadius(.6f * r))
-    drawCircle(color, .75f * r, center + Offset(-.6f * r, -.1f * r))
-    drawCircle(color, r, center + Offset(.4f * r, -.35f * r))
 }
 
 private fun DrawScope.bush(hue: Hue, center: Offset, r: Float) {
@@ -287,29 +266,4 @@ private fun DrawScope.star(color: Color, center: Offset, r: Float) {
     }
     path.close()
     drawPath(path, color)
-}
-
-/** White pill bubble with a tail [BubbleTailInset] from its right edge, pointing down at the speaker. */
-@Composable
-private fun SpeechBubble(text: String, modifier: Modifier) {
-    val c = LocalIdentity.current
-    val tail = 26.dp
-    Box(
-        modifier
-            .drawBehind {
-                val body = Size(size.width, size.height - tail.toPx())
-                drawRoundRect(c.scene.bubble, Offset.Zero, body, CornerRadius(body.height / 2))
-                val x = size.width - BubbleTailInset.toPx()
-                drawPath(Path().apply {
-                    moveTo(x - 20.dp.toPx(), body.height - 1f)
-                    lineTo(x, size.height)
-                    lineTo(x + 20.dp.toPx(), body.height - 1f)
-                    close()
-                }, c.scene.bubble)
-            }
-            .padding(start = 40.dp, end = 40.dp, top = 10.dp, bottom = 10.dp + tail)
-            .semantics { heading() },
-    ) {
-        Text(text, style = MaterialTheme.typography.displaySmall.titleWeight().copy(fontSize = 44.sp, lineHeight = 66.sp), color = c.ink)
-    }
 }

@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** Device preferences only; child profiles and the disposable experiment database remain separate. */
+/** Device preferences; child profiles are their own table below, and the disposable experiment database stays separate. */
 @Entity(tableName = "app_preferences")
 data class AppPreferences(
     @PrimaryKey val id: Int = 1,
@@ -28,13 +28,45 @@ interface PreferencesDao {
     @Upsert suspend fun save(preferences: AppPreferences)
 }
 
-@Database(entities = [AppPreferences::class], version = 1, exportSchema = false)
+/**
+ * A child set up during onboarding. [answers] holds one letter per observation question (y, n or u for
+ * unsure), and [startPath] is where the road begins for them; both are a starting suggestion, never a diagnosis.
+ */
+@Entity(tableName = "child_profiles")
+data class ChildProfile(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val avatar: String,
+    val age: Int,
+    val answers: String,
+    val startPath: String,
+    val createdAt: Long = System.currentTimeMillis(),
+)
+
+@Dao
+interface ChildDao {
+    @Insert suspend fun insert(child: ChildProfile): Long
+    @Query("SELECT * FROM child_profiles ORDER BY createdAt LIMIT 1")
+    suspend fun first(): ChildProfile?
+}
+
+@Database(entities = [AppPreferences::class, ChildProfile::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun preferences(): PreferencesDao
+    abstract fun children(): ChildDao
     companion object {
         @Volatile private var instance: AppDatabase? = null
+        private val AddChildProfiles = object : androidx.room.migration.Migration(1, 2) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `child_profiles` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, " +
+                        "`avatar` TEXT NOT NULL, `age` INTEGER NOT NULL, `answers` TEXT NOT NULL, `startPath` TEXT NOT NULL, `createdAt` INTEGER NOT NULL)",
+                )
+            }
+        }
         fun get(application: Application): AppDatabase = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(application, AppDatabase::class.java, "nuha-app.db")
+                .addMigrations(AddChildProfiles)
                 .build().also { instance = it }
         }
     }
