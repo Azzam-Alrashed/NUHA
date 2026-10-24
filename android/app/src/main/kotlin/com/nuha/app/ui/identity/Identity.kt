@@ -27,8 +27,10 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.shadow.Shadow
@@ -59,10 +61,14 @@ data class Hue(
 @Immutable
 data class Scene(
     val ground: Color,
-    val glow: Color,
     val road: Color,
     val dash: Color,
     val tileLip: Color,
+    val sun: Color,
+    val hill: Color,
+    val cloud: Color,
+    /** Speech bubbles; white except in high contrast, where white would vanish on white paper. */
+    val bubble: Color = Color.White,
 )
 
 /**
@@ -106,7 +112,7 @@ private val Colourful = IdentityPalette(
     ink = Color(0xFF1E2A4A),
     paper = Color(0xFFFFF8EE),
     // Sunny ground of the Ladybug road on the moodboard.
-    scene = Scene(Color(0xFFFFD866), Color(0xFFFFE08A), Color(0xFFFFEDB0), Color.White, Color(0xFFEADBA8)),
+    scene = Scene(Color(0xFFFFD866), Color(0xFFFFEDB0), Color.White, Color(0xFFEADBA8), Color(0xFFFFB356), Color(0xFFFFCB45), Color.White.copy(alpha = .9f)),
     amethyst = hue(0xFF9956DE, 0xFF7340A6, WHITE, 0xFF9755DC, 0xFFEBDDF8, largeOnly = true),
     slateBlue = hue(0xFF7274ED, 0xFF5657B2, WHITE, 0xFF686AD8, 0xFFE3E3FB, largeOnly = true),
     summerSky = hue(0xFF1FA7E1, 0xFF1D9ACF, INK, 0xFF187FAB, 0xFFD2EDF9),
@@ -119,7 +125,7 @@ private val Colourful = IdentityPalette(
 
 // Each fill moved 55% toward its tint (sRGB mix); lips, deep shades and tints unchanged; ink text on every fill.
 private val Muted = Colourful.copy(
-    scene = Scene(Color(0xFFFFEDBE), Color(0xFFFFF3D6), Color(0xFFFFF8E8), Color.White, Color(0xFFE6DCC0)),
+    scene = Scene(Color(0xFFFFEDBE), Color(0xFFFFF8E8), Color.White, Color(0xFFE6DCC0), Color(0xFFFFD9A8), Color(0xFFFFE4A3), Color.White),
     amethyst = hue(0xFFC6A0EC, 0xFF7340A6, INK, 0xFF9755DC, 0xFFEBDDF8),
     slateBlue = hue(0xFFB0B1F5, 0xFF5657B2, INK, 0xFF686AD8, 0xFFE3E3FB),
     summerSky = hue(0xFF81CEEE, 0xFF1D9ACF, INK, 0xFF187FAB, 0xFFD2EDF9),
@@ -134,7 +140,7 @@ private val Muted = Colourful.copy(
 private val HighContrast = IdentityPalette(
     ink = Color(0xFF1E2A4A),
     paper = Color(0xFFFFFFFF),
-    scene = Scene(Color.White, Color.White, Color(0xFFE4E7EE), Color(0xFF1E2A4A), Color(0xFF1E2A4A)),
+    scene = Scene(Color.White, Color(0xFFE4E7EE), Color(0xFF1E2A4A), Color(0xFF1E2A4A), Color(0xFFE4E7EE), Color(0xFFEEF0F4), Color(0xFFE4E7EE), bubble = Color(0xFFE4E7EE)),
     amethyst = hue(0xFF9755DC, INK, WHITE, 0xFF9755DC, WHITE),
     slateBlue = hue(0xFF686AD8, INK, WHITE, 0xFF686AD8, WHITE),
     summerSky = hue(0xFF187FAB, INK, WHITE, 0xFF187FAB, WHITE),
@@ -354,15 +360,15 @@ fun NuhaIllustration(kind: String, modifier: Modifier = Modifier, description: S
 /**
  * The lead mascot: a five-petal flower with a face and no limbs (ui-style.md, Mascot system), drawn in a
  * 300×300 content box. [gaze] (-1..1 per axis) moves the pupils so the guide looks at what it is pointing to.
- * A tap hops the flower off its shadow and calls [onTap]; under reduced motion it only calls [onTap].
+ * It pops in on entry, and a tap hops it off its shadow and calls [onTap]; under reduced motion it appears
+ * in place and a tap only calls [onTap].
  */
 @Composable
 fun NuhaGuide(modifier: Modifier = Modifier, gaze: Offset = Offset.Zero, description: String? = null, onTap: (() -> Unit)? = null) {
     val c = LocalIdentity.current
     val reducedMotion = LocalReducedMotion.current
-    var entered by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { entered = true }
-    val reveal by animateFloatAsState(if (entered || reducedMotion) 1f else 0f, tween(if (reducedMotion) 0 else 240), label = "Guide entrance")
+    val appear = remember { Animatable(if (reducedMotion) 1f else 0f) }
+    LaunchedEffect(Unit) { appear.animateTo(1f, spring(dampingRatio = .55f, stiffness = Spring.StiffnessLow)) }
     val hop = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val tap by rememberUpdatedState(onTap)
@@ -377,7 +383,17 @@ fun NuhaGuide(modifier: Modifier = Modifier, gaze: Offset = Offset.Zero, descrip
                 tap?.invoke()
             })
         }
-    Canvas(modifier.graphicsLayer { alpha = reveal }.then(if (description != null) Modifier.semantics { contentDescription = description } else Modifier).then(tappable)) {
+    Canvas(
+        modifier
+            .graphicsLayer {
+                alpha = (appear.value * 2f).coerceIn(0f, 1f)
+                val pop = .6f + .4f * appear.value
+                scaleX = pop; scaleY = pop
+                transformOrigin = TransformOrigin(.5f, .95f)
+            }
+            .then(if (description != null) Modifier.semantics { contentDescription = description } else Modifier)
+            .then(tappable),
+    ) {
         val s = min(size.width, size.height) / 300f
         with(drawContext.canvas) { save(); translate((size.width - 300*s)/2, (size.height - 300*s)/2); scale(s, s) }
         val h = c.guide
@@ -388,16 +404,21 @@ fun NuhaGuide(modifier: Modifier = Modifier, gaze: Offset = Offset.Zero, descrip
                     addOval(androidx.compose.ui.geometry.Rect(Offset(x, y), r))
             }
             drawPath(flower, Brush.verticalGradient(listOf(h.fill.lifted(c.lift), h.fill), 14f, 286f))
-            val look = Offset(gaze.x.coerceIn(-1f, 1f) * 9f, gaze.y.coerceIn(-1f, 1f) * 9f + 2f)
-            for (x in listOf(124f, 176f)) {
-                drawOval(Color.White, Offset(x - 26f, 112f), Size(52f, 60f))
-                drawCircle(c.ink, 16f, Offset(x, 142f) + look)
-                drawCircle(Color.White, 4.4f, Offset(x + 4f, 136f) + look)
+            // A soft shine on the top petal, the one highlight soft-flat allows.
+            rotate(-24f, 128f toO 50f) { drawOval(Color.White.copy(alpha = if (c.highContrast) 0f else .32f), Offset(110f, 42f), Size(38f, 17f)) }
+            // Face: large and set low in the centre so the flower reads as a character first.
+            val look = Offset(gaze.x.coerceIn(-1f, 1f) * 10f, gaze.y.coerceIn(-1f, 1f) * 10f + 2f)
+            for (x in listOf(120f, 180f)) {
+                drawOval(Color.White, Offset(x - 29f, 118f), Size(58f, 66f))
+                drawCircle(c.ink, 18f, Offset(x, 151f) + look)
+                drawCircle(Color.White, 5f, Offset(x + 5f, 144f) + look)
             }
-            for ((a, b) in listOf((106f toO 112f) to (98f toO 100f), (124f toO 106f) to (124f toO 92f), (142f toO 112f) to (146f toO 100f),
-                (158f toO 112f) to (154f toO 100f), (176f toO 106f) to (176f toO 92f), (194f toO 112f) to (202f toO 100f)))
-                drawLine(c.ink, a, b, 5f, StrokeCap.Round)
-            drawPath(Path().apply { moveTo(138f, 190f); quadraticTo(150f, 202f, 162f, 190f) }, c.ink, style = Stroke(6f, cap = StrokeCap.Round))
+            // Three lashes per eye, fanned to the outer side so the two sets never meet.
+            for (side in listOf(-1f, 1f)) for ((a, b) in listOf((97f toO 130f) to (85f toO 119f), (106f toO 122f) to (99f toO 108f), (118f toO 118f) to (115f toO 103f))) {
+                fun m(o: Offset) = if (side < 0) o else Offset(300f - o.x, o.y)
+                drawLine(c.ink, m(a), m(b), 5.5f, StrokeCap.Round)
+            }
+            drawPath(Path().apply { moveTo(136f, 203f); quadraticTo(150f, 217f, 164f, 203f) }, c.ink, style = Stroke(6.5f, cap = StrokeCap.Round))
         }
         drawContext.canvas.restore()
     }

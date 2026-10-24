@@ -26,10 +26,11 @@ fun NuhaApp() {
     val error by model.error.collectAsStateWithLifecycle()
     var screen by rememberSaveable { mutableStateOf("welcome") }
     NuhaTheme(appearance = preferences?.appearance ?: "colourful", reducedMotion = preferences?.reducedMotion ?: true) {
+        val current = preferences
         when {
             // Wait for the saved appearance so a muted child never sees the colourful default first.
-            preferences == null -> Placeholder(if (error) "تعذّر تحميل الإعدادات. أعد فتح التطبيق للمحاولة مجدداً." else "")
-            screen == "welcome" -> WelcomeScreen(onStart = { screen = "next" })
+            current == null -> Placeholder(if (error) "تعذّر تحميل الإعدادات. أعد فتح التطبيق للمحاولة مجدداً." else "")
+            screen == "welcome" -> WelcomeScreen(onStart = { screen = "next" }, voice = current.voice, effects = current.effects)
             else -> {
                 BackHandler { screen = "welcome" }
                 Placeholder("الشاشة التالية قيد البناء")
