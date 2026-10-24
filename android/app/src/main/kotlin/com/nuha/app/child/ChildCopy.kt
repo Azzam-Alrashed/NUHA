@@ -14,7 +14,6 @@ object ChildCopy {
     const val Pause = "استراحة"
     const val Resume = "نكمل"
     const val Map = "الخريطة"
-    const val UnderConstruction = "هذا النشاط قيد البناء"
     const val StartHere = "نبدأ من هنا"
     fun stars(earned: Int) = "${Pending.numeral(earned)} من ${Pending.numeral(3)} نجوم"
 

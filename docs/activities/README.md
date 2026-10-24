@@ -4,15 +4,15 @@ SRS FR-ACT-001: before content is produced for an activity, it needs a sheet app
 
 | Activity | id | Sheet | Educator approval |
 |---|---|---|---|
-| «تلوين المشاعر» | `emotions` | not written | — |
-| «رحلة مطابقة البيئة» | `environment` | not written | — |
-| «تتبع مسار الأشكال الاجتماعية» | `path` | not written | — |
-| «تتبع النجوم الهادئة» | `star` | not written | — |
-| «متاهة توازن الكرة» | `maze` | not written | — |
-| «زرع بستان الأزهار» | `garden` | not written | — |
-| «كتابة الحروف وتوصيل الكلمات» | `letters` | not written | — |
-| «نسخ الأنماط الهندسية» | `patterns` | not written | — |
-| «الميزان الحسابي البصري» | `balance` | not written | — |
+| «تلوين المشاعر» | `emotions` | [draft](emotions.md) | — |
+| «رحلة مطابقة البيئة» | `environment` | [draft](environment.md) | — |
+| «تتبع مسار الأشكال الاجتماعية» | `path` | [draft](path.md) | — |
+| «تتبع النجوم الهادئة» | `star` | [draft](star.md) | — |
+| «متاهة توازن الكرة» | `maze` | [draft](maze.md) | — |
+| «زرع بستان الأزهار» | `garden` | [draft](garden.md) | — |
+| «كتابة الحروف وتوصيل الكلمات» | `letters` | [draft](letters.md) | — |
+| «نسخ الأنماط الهندسية» | `patterns` | [draft](patterns.md) | — |
+| «الميزان الحسابي البصري» | `balance` | [draft](balance.md) | — |
 
 ## Template
 

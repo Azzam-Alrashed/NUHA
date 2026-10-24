@@ -466,10 +466,11 @@ fun IdentityPalette.avatarHue(kind: String): Hue = when (kind) {
 
 /**
  * A shape buddy: a flat body in its hue with the guide's eyes and smile and no limbs, in a 100×100 content box.
- * [gaze] (-1..1 per axis) moves the pupils. [hue] overrides the buddy's own hue, for activity mascots.
+ * [gaze] (-1..1 per axis) moves the pupils. [hue] overrides the buddy's own hue, for activity mascots. [expression] is
+ * "happy" (the default), "sad", "angry" or "scared", the faces of the emotions activity.
  */
 @Composable
-fun NuhaAvatar(kind: String, modifier: Modifier = Modifier, gaze: Offset = Offset.Zero, hue: Hue? = null) {
+fun NuhaAvatar(kind: String, modifier: Modifier = Modifier, gaze: Offset = Offset.Zero, hue: Hue? = null, expression: String = "happy") {
     val c = LocalIdentity.current
     val h = hue ?: c.avatarHue(kind)
     Canvas(modifier.clearAndSetSemantics {}) {
@@ -497,14 +498,38 @@ fun NuhaAvatar(kind: String, modifier: Modifier = Modifier, gaze: Offset = Offse
                 faceY = 60f
             }
         }
-        val look = Offset(gaze.x.coerceIn(-1f, 1f) * 3f, gaze.y.coerceIn(-1f, 1f) * 3f + .6f)
-        for (x in listOf(40f, 60f)) {
-            drawOval(Color.White, Offset(x - 8.5f, faceY - 10f), Size(17f, 19f))
-            drawCircle(c.ink, 5.2f, Offset(x, faceY) + look)
-            drawCircle(Color.White, 1.5f, Offset(x + 1.6f, faceY - 2f) + look)
-        }
-        drawPath(Path().apply { moveTo(45f, faceY + 13f); quadraticTo(50f, faceY + 18f, 55f, faceY + 13f) }, c.ink, style = Stroke(2.6f, cap = StrokeCap.Round))
+        expressionFace(c.ink, faceY, expression, gaze)
         drawContext.canvas.restore()
+    }
+}
+
+/**
+ * The buddies' eyes, brows and mouth around [faceY] in the 100×100 box. Each feeling differs by shape, not colour:
+ * sad has a downturned mouth and drooping brows, angry has brows pulled down to the middle and a flat mouth,
+ * scared has raised brows, small pupils and an open mouth.
+ */
+fun DrawScope.expressionFace(ink: Color, faceY: Float, expression: String, gaze: Offset = Offset.Zero) {
+    val look = Offset(gaze.x.coerceIn(-1f, 1f) * 3f, gaze.y.coerceIn(-1f, 1f) * 3f + .6f)
+    val pupil = if (expression == "scared") 3.4f else 5.2f
+    val eyeH = if (expression == "scared") 22f else 19f
+    for (x in listOf(40f, 60f)) {
+        drawOval(Color.White, Offset(x - 8.5f, faceY - eyeH / 2 - .5f), Size(17f, eyeH))
+        drawCircle(ink, pupil, Offset(x, faceY) + look)
+        drawCircle(Color.White, 1.3f, Offset(x + 1.4f, faceY - 1.8f) + look)
+    }
+    val brow = Stroke(2.8f, cap = StrokeCap.Round)
+    fun line(a: Offset, b: Offset) = drawLine(ink, a, b, brow.width, StrokeCap.Round)
+    when (expression) {
+        "sad" -> { line(Offset(33f, faceY - 13f), Offset(45f, faceY - 16f)); line(Offset(67f, faceY - 13f), Offset(55f, faceY - 16f)) }
+        "angry" -> { line(Offset(32f, faceY - 17f), Offset(46f, faceY - 11f)); line(Offset(68f, faceY - 17f), Offset(54f, faceY - 11f)) }
+        "scared" -> { drawArc(ink, 200f, 140f, false, Offset(33f, faceY - 21f), Size(14f, 8f), style = brow); drawArc(ink, 200f, 140f, false, Offset(53f, faceY - 21f), Size(14f, 8f), style = brow) }
+    }
+    val mouth = Stroke(2.6f, cap = StrokeCap.Round)
+    when (expression) {
+        "sad" -> drawPath(Path().apply { moveTo(44f, faceY + 18f); quadraticTo(50f, faceY + 12f, 56f, faceY + 18f) }, ink, style = mouth)
+        "angry" -> drawLine(ink, Offset(45f, faceY + 15f), Offset(55f, faceY + 15f), mouth.width, StrokeCap.Round)
+        "scared" -> drawOval(ink, Offset(46.5f, faceY + 11f), Size(7f, 8f))
+        else -> drawPath(Path().apply { moveTo(45f, faceY + 13f); quadraticTo(50f, faceY + 18f, 55f, faceY + 13f) }, ink, style = mouth)
     }
 }
 

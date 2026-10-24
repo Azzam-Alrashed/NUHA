@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -89,11 +90,26 @@ class TaskScope(
     val wrongTick: Int,
     val trialNumber: Int,
     val reducedMotion: Boolean,
-    private val onRespond: (choice: String, correct: Boolean, input: InputType, at: Offset?, strokes: String?) -> Unit,
+    private val onRespond: (choice: String, correct: Boolean, input: InputType, at: Offset?, strokes: String?, detail: String?) -> Unit,
+    private val onProgress: (choice: String, input: InputType) -> Unit,
+    private val onMiss: () -> Unit,
+    private val onActive: () -> Unit,
+    private val onSay: (String) -> Unit,
 ) {
     val solved: Boolean get() = solvedKey != null
-    /** Report a response. [at] is where it happened, in root coordinates, so the star can fly from there. */
-    fun respond(choice: String, correct: Boolean, input: InputType, at: Offset?, strokes: String? = null) = onRespond(choice, correct, input, at, strokes)
+    /**
+     * Report a response. [at] is where it happened, in root coordinates, so the star can fly from there. [strokes]: the
+     * drawing (kept as an attempt when wrong). [detail]: activity-specific measures saved with the solved trial.
+     */
+    fun respond(choice: String, correct: Boolean, input: InputType, at: Offset?, strokes: String? = null, detail: String? = null) = onRespond(choice, correct, input, at, strokes, detail)
+    /** A correct step of a multi-step trial that does not finish it. */
+    fun progress(choice: String, input: InputType) = onProgress(choice, input)
+    /** An input that hit no target (a missed drop, an obstacle touched); recorded apart from wrong answers. */
+    fun miss() = onMiss()
+    /** The child is working (touching, drawing); holds off the automatic prompt for a quiet spell. */
+    fun active() = onActive()
+    /** Speak a line that is not an answer, such as a group's count when the child inspects it. */
+    fun say(text: String) = onSay(text)
 }
 
 /**
@@ -104,14 +120,14 @@ class TaskScope(
 fun TaskScreen(
     activity: Activity,
     child: ChildProfile,
-    plan: ActivityPlan,
+    plans: (completedSessions: Int) -> ActivityPlan,
     voice: Boolean,
     effects: Boolean,
     onMap: () -> Unit,
     content: @Composable BoxScope.(TaskScope) -> Unit,
 ) {
     val app = LocalContext.current.applicationContext as Application
-    val vm: TaskViewModel = viewModel(key = "task-${child.id}-${activity.id}") { TaskViewModel(app, plan, child.id, child.name) }
+    val vm: TaskViewModel = viewModel(key = "task-${child.id}-${activity.id}") { TaskViewModel(app, activity.id, plans, child.id, child.name) }
     val reduced = LocalReducedMotion.current
     val speech = rememberSpeech(voice)
     val sounds = rememberEffects(effects)
@@ -152,11 +168,13 @@ fun TaskScreen(
         val spec = vm.trial
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             InstructionStrip(activity, spec?.instruction.orEmpty(), vm.nodTick, sounds, onRepeat = vm::repeat, onHelp = vm::help)
-            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Box(Modifier.weight(1f).fillMaxWidth().watchTouches(vm::active), contentAlignment = Alignment.Center) {
                 if (spec != null && vm.phase == TaskPhase.Playing) {
-                    val scope = TaskScope(spec, vm.level, vm.solvedKey, vm.wrongKey, vm.wrongTick, vm.trialNumber, reduced) { choice, correct, input, at, strokes ->
-                        vm.respond(choice, correct, input, at, reduced, strokes)
-                    }
+                    val scope = TaskScope(
+                        spec, vm.level, vm.solvedKey, vm.wrongKey, vm.wrongTick, vm.trialNumber, reduced,
+                        onRespond = { choice, correct, input, at, strokes, detail -> vm.respond(choice, correct, input, at, reduced, strokes, detail) },
+                        onProgress = vm::progress, onMiss = vm::miss, onActive = vm::active, onSay = vm::sayLine,
+                    )
                     content(scope)
                 }
             }
@@ -270,6 +288,14 @@ private fun ResumeCard(saved: Int, slots: Int, sounds: com.nuha.app.audio.Effect
             }
         }
     }
+}
+
+/**
+ * Calls [onTouch] for every press and move inside, without consuming anything: a child who is touching or drawing is
+ * working, so the quiet spell before an automatic prompt starts again (however long a stroke takes).
+ */
+private fun Modifier.watchTouches(onTouch: () -> Unit) = pointerInput(Unit) {
+    awaitPointerEventScope { while (true) { if (awaitPointerEvent(PointerEventPass.Initial).changes.any { it.pressed }) onTouch() } }
 }
 
 /** Swallows touches so nothing under a card can be pressed. */

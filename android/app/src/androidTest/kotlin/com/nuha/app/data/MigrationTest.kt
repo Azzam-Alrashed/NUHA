@@ -12,7 +12,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * IR-STO-002: every schema change keeps existing data. Builds databases exactly as versions 1 and 2 shipped them, opens
+ * IR-STO-002: every schema change keeps existing data. Builds databases exactly as versions 1, 2 and 3 shipped them, opens
  * them through the app's migrations, and checks saved data survives and the new tables work. IR-STO-003: a trial saved
  * twice under one ID is kept once.
  */
@@ -30,6 +30,18 @@ class MigrationTest {
         "CREATE TABLE IF NOT EXISTS `child_profiles` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, " +
             "`avatar` TEXT NOT NULL, `age` INTEGER NOT NULL, `answers` TEXT NOT NULL, `startPath` TEXT NOT NULL, `createdAt` INTEGER NOT NULL)"
 
+    private val v3Records = arrayOf(
+        "CREATE TABLE IF NOT EXISTS `sessions` (`id` TEXT NOT NULL, `childId` INTEGER NOT NULL, `activity` TEXT NOT NULL, `taskVersion` INTEGER NOT NULL, " +
+            "`difficulty` TEXT NOT NULL, `slots` INTEGER NOT NULL, `seed` INTEGER NOT NULL, `status` TEXT NOT NULL, `startedAt` INTEGER NOT NULL, `endedAt` INTEGER, PRIMARY KEY(`id`))",
+        "CREATE INDEX IF NOT EXISTS `index_sessions_childId_activity` ON `sessions` (`childId`, `activity`)",
+        "CREATE TABLE IF NOT EXISTS `trials` (`id` TEXT NOT NULL, `sessionId` TEXT NOT NULL, `childId` INTEGER NOT NULL, `activity` TEXT NOT NULL, " +
+            "`taskVersion` INTEGER NOT NULL, `difficulty` TEXT NOT NULL, `itemKey` TEXT NOT NULL, `inputType` TEXT NOT NULL, `firstChoice` TEXT, " +
+            "`firstCorrect` INTEGER NOT NULL, `firstIndependent` INTEGER NOT NULL, `wrongAttempts` INTEGER NOT NULL, `helpLevel` INTEGER NOT NULL, " +
+            "`helpRequests` INTEGER NOT NULL, `outcome` TEXT NOT NULL, `activeMillis` INTEGER NOT NULL, `startedAt` INTEGER NOT NULL, `endedAt` INTEGER NOT NULL, " +
+            "`strokes` TEXT, PRIMARY KEY(`id`))",
+        "CREATE INDEX IF NOT EXISTS `index_trials_childId_activity` ON `trials` (`childId`, `activity`)",
+    )
+
     private fun oldDatabase(version: Int, vararg sql: String) =
         SQLiteDatabase.openOrCreateDatabase(context.getDatabasePath(name), null).use { db -> sql.forEach(db::execSQL); db.version = version }
 
@@ -38,6 +50,32 @@ class MigrationTest {
         firstChoice = "a", firstCorrect = true, firstIndependent = true, wrongAttempts = 0, helpLevel = 0, helpRequests = 0, outcome = "independent",
         activeMillis = 1200, startedAt = 1, endedAt = 2,
     )
+
+    @Test fun version3KeepsTrialsAndGainsMissesAndDetail() = runBlocking {
+        oldDatabase(
+            3, v1Preferences, v2Children, *v3Records,
+            "INSERT INTO app_preferences VALUES (1, 'colourful', 1, 1, 0, 0, 1)",
+            "INSERT INTO child_profiles (name, avatar, age, answers, startPath, createdAt) VALUES ('Sara', 'bean', 5, 'nnnyynnnyy', 'attention', 10)",
+            "INSERT INTO sessions VALUES ('s1', 1, 'star', 1, 'level=0', 5, 42, 'completed', 1, 9)",
+            "INSERT INTO trials VALUES ('t1', 's1', 1, 'star', 1, 'level=0', 'run-0-arch', 'stylus', 'run', 1, 1, 0, 0, 0, 'independent', 8000, 1, 2, 'P|0.1,0.2,0')",
+        )
+        val database = AppDatabase.build(context, name)
+        try {
+            val records = database.records()
+            val old = records.trialsIn("s1").single()
+            assertEquals("run-0-arch", old.itemKey)
+            assertEquals("P|0.1,0.2,0", old.strokes)
+            assertEquals(0, old.misses)
+            assertEquals(null, old.detail)
+            assertEquals(1, records.completedCount(1, "star"))
+            records.insertTrial(trial("t2").copy(sessionId = "s1", misses = 2, detail = "contacts=2;restarts=1"))
+            val added = records.trialsIn("s1").first { it.id == "t2" }
+            assertEquals(2, added.misses)
+            assertEquals("contacts=2;restarts=1", added.detail)
+        } finally {
+            database.close()
+        }
+    }
 
     @Test fun version2KeepsChildrenAndGainsRecords() = runBlocking {
         oldDatabase(

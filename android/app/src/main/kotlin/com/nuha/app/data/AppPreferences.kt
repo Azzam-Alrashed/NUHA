@@ -50,7 +50,7 @@ interface ChildDao {
     suspend fun first(): ChildProfile?
 }
 
-@Database(entities = [AppPreferences::class, ChildProfile::class, SessionRecord::class, TrialRecord::class], version = 3, exportSchema = false)
+@Database(entities = [AppPreferences::class, ChildProfile::class, SessionRecord::class, TrialRecord::class], version = 4, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun preferences(): PreferencesDao
     abstract fun children(): ChildDao
@@ -68,8 +68,11 @@ abstract class AppDatabase : RoomDatabase() {
         private val AddActivityRecords = object : androidx.room.migration.Migration(2, 3) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) { RecordsSchema.create.forEach(db::execSQL) }
         }
+        private val AddTrialDetail = object : androidx.room.migration.Migration(3, 4) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) { RecordsSchema.addMissesAndDetail.forEach(db::execSQL) }
+        }
         /** Every migration, oldest first; tests open old databases through these. */
-        val Migrations = arrayOf(AddChildProfiles, AddActivityRecords)
+        val Migrations = arrayOf(AddChildProfiles, AddActivityRecords, AddTrialDetail)
         fun build(context: android.content.Context, name: String): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, name).addMigrations(*Migrations).build()
         fun get(application: Application): AppDatabase = instance ?: synchronized(this) {

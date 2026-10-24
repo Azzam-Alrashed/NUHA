@@ -54,7 +54,6 @@ import com.nuha.app.ui.identity.ChunkySurface
 import com.nuha.app.ui.identity.Hue
 import com.nuha.app.ui.identity.LocalIdentity
 import com.nuha.app.ui.identity.LocalReducedMotion
-import com.nuha.app.ui.identity.NuhaAvatar
 import com.nuha.app.ui.identity.NuhaGuide
 import com.nuha.app.ui.identity.NuhaPictogram
 import com.nuha.app.ui.identity.pressSink
@@ -174,15 +173,5 @@ private fun PauseCard(sounds: Effects?, onResume: () -> Unit, onStop: () -> Unit
                 ChunkyButton(ChildCopy.Done, { sounds?.pop(); onStop() }, Modifier.height(104.dp).widthIn(min = 240.dp), secondary = true, style = style)
             }
         }
-    }
-}
-
-/** Stand-in body until the activity is built (milestones 2–3): its mascot and a note. */
-@Composable
-fun UnderConstruction(activity: Activity) {
-    val c = LocalIdentity.current
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        NuhaAvatar(activity.mascot, Modifier.size(240.dp), hue = c.activityHue(activity))
-        Text(ChildCopy.UnderConstruction, color = c.ink, style = MaterialTheme.typography.headlineMedium.titleWeight())
     }
 }

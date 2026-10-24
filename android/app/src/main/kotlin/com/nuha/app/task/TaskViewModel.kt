@@ -36,8 +36,10 @@ data class Flight(val from: Offset?, val slot: Int, val id: Int)
  * steps up the prompt ladder after a wrong answer, a help request or a quiet spell, and paces the per-trial
  * celebration (FR-RWD-002) before the next trial.
  */
-class TaskViewModel(application: Application, private val plan: ActivityPlan, childId: Long, private val childName: String) : AndroidViewModel(application) {
-    private val engine = SessionEngine(RoomRecordStore(AppDatabase.get(application).records()), plan, childId)
+class TaskViewModel(
+    application: Application, activity: String, plans: (completedSessions: Int) -> ActivityPlan, childId: Long, private val childName: String,
+) : AndroidViewModel(application) {
+    private val engine = SessionEngine(RoomRecordStore(AppDatabase.get(application).records()), activity, plans, childId)
 
     var phase by mutableStateOf<TaskPhase>(TaskPhase.Loading); private set
     var trial by mutableStateOf<TrialSpec?>(null); private set
@@ -52,7 +54,7 @@ class TaskViewModel(application: Application, private val plan: ActivityPlan, ch
     var flight by mutableStateOf<Flight?>(null); private set
     var speech by mutableStateOf<Cue?>(null); private set
     var sound by mutableStateOf<Cue?>(null); private set
-    val slots: Int get() = plan.slots
+    val slots: Int get() = engine.session?.slots ?: Pending.TokenSlots
 
     private var cues = 0
     private var paused = false
@@ -88,12 +90,12 @@ class TaskViewModel(application: Application, private val plan: ActivityPlan, ch
      * A response from the activity. Correct: save, fill a slot, celebrate, then move on. Wrong: the ladder steps up
      * and the matching prompt is spoken; nothing is lost and there is no failure state (FR-ACT-007).
      */
-    fun respond(choice: String, correct: Boolean, input: InputType, at: Offset?, reducedMotion: Boolean, strokes: String? = null) {
+    fun respond(choice: String, correct: Boolean, input: InputType, at: Offset?, reducedMotion: Boolean, strokes: String? = null, detail: String? = null) {
         if (phase != TaskPhase.Playing || busy || solvedKey != null) return
         busy = true
         viewModelScope.launch {
             val spec = trial ?: return@launch
-            val solved = engine.respond(choice, correct, input, strokes)
+            val solved = engine.respond(choice, correct, input, strokes, detail)
             level = engine.tracker?.level ?: level
             if (!solved) {
                 wrongKey = choice; wrongTick++
@@ -118,6 +120,15 @@ class TaskViewModel(application: Application, private val plan: ActivityPlan, ch
             } else beginTrial()
         }
     }
+
+    /** A correct step that does not finish the trial (a sequence). */
+    fun progress(choice: String, input: InputType) { if (phase == TaskPhase.Playing) engine.tracker?.progress(choice, input) }
+
+    /** The child is working on a continuous task; no automatic prompt while they are. */
+    fun active() { engine.tracker?.noteActivity() }
+
+    /** An input that hit no target; recorded, never a wrong answer. */
+    fun miss() { if (phase == TaskPhase.Playing) engine.tracker?.miss() }
 
     /** The child pressed help: one step up the ladder, counted as a request. */
     fun help() {
@@ -168,5 +179,6 @@ class TaskViewModel(application: Application, private val plan: ActivityPlan, ch
     }
 
     private fun say(text: String) { speech = Cue(text, ++cues) }
+    fun sayLine(text: String) = say(text)
     private fun play(name: String) { sound = Cue(name, ++cues) }
 }

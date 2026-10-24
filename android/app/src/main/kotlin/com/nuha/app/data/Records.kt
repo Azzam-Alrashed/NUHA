@@ -31,7 +31,9 @@ data class SessionRecord(
  * One trial (FR-ACT-011), written when it ends (FR-SYN-002). [id] is created on the device when the trial starts,
  * so saving twice, or a later upload retried, never duplicates it (IR-STO-003, EXP §4).
  * [firstIndependent]: the first response came before any prompt. [helpLevel]: the highest prompt-ladder level reached.
- * [outcome]: "independent" (first response correct and unprompted) or "with_help". [strokes]: drawing trials only.
+ * [outcome]: "independent" (first response correct and unprompted) or "with_help". [strokes]: drawing trials only, every
+ * attempt in order, the accepted one last. [misses]: inputs that hit no target (a missed drop, an obstacle touched),
+ * kept apart from wrong answers (FR-ENV-002). [detail]: activity-specific measures as "key=value;…" (FR-STR-002).
  */
 @Entity(tableName = "trials", indices = [Index("childId", "activity")])
 data class TrialRecord(
@@ -54,6 +56,8 @@ data class TrialRecord(
     val startedAt: Long,
     val endedAt: Long,
     val strokes: String? = null,
+    @androidx.room.ColumnInfo(defaultValue = "0") val misses: Int = 0,
+    val detail: String? = null,
 )
 
 @Dao
@@ -69,12 +73,20 @@ interface RecordsDao {
     suspend fun trialsIn(sessionId: String): List<TrialRecord>
     @Query("SELECT activity, COUNT(*) AS completed FROM sessions WHERE childId = :childId AND status = 'completed' GROUP BY activity")
     suspend fun completedByActivity(childId: Long): List<ActivityCount>
+    @Query("SELECT COUNT(*) FROM sessions WHERE childId = :childId AND activity = :activity AND status = 'completed'")
+    suspend fun completedCount(childId: Long, activity: String): Int
 }
 
 data class ActivityCount(val activity: String, val completed: Int)
 
-/** Schema v3 SQL, kept beside the entities it must match exactly (Room validates it after migrating). */
+/** Schema SQL, kept beside the entities it must match exactly (Room validates it after migrating). */
 internal object RecordsSchema {
+    /** v3 → v4: missed inputs and activity-specific detail on each trial. */
+    val addMissesAndDetail = listOf(
+        "ALTER TABLE `trials` ADD COLUMN `misses` INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE `trials` ADD COLUMN `detail` TEXT",
+    )
+    /** v2 → v3: sessions and trials. */
     val create = listOf(
         "CREATE TABLE IF NOT EXISTS `sessions` (`id` TEXT NOT NULL, `childId` INTEGER NOT NULL, `activity` TEXT NOT NULL, `taskVersion` INTEGER NOT NULL, " +
             "`difficulty` TEXT NOT NULL, `slots` INTEGER NOT NULL, `seed` INTEGER NOT NULL, `status` TEXT NOT NULL, `startedAt` INTEGER NOT NULL, `endedAt` INTEGER, PRIMARY KEY(`id`))",

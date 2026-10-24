@@ -26,6 +26,8 @@ class EngineTest {
         override suspend fun activeSession(childId: Long, activity: String) = sessions.values.lastOrNull { it.childId == childId && it.activity == activity && it.status == "active" }
         override suspend fun insertTrial(trial: TrialRecord) { if (trials.none { it.id == trial.id }) trials += trial }
         override suspend fun trialsIn(sessionId: String) = trials.filter { it.sessionId == sessionId }
+        override suspend fun completedSessions(childId: Long, activity: String) =
+            sessions.values.count { it.childId == childId && it.activity == activity && it.status == "completed" }
     }
 
     private object Plan : ActivityPlan {
@@ -87,7 +89,7 @@ class EngineTest {
 
     @Test fun sessionFillsBoardSavesTrialsAndCompletes() = runBlocking {
         val store = FakeStore()
-        val engine = SessionEngine(store, Plan, childId = 9, clock, newId)
+        val engine = SessionEngine(store, Plan.activity.id, { Plan }, childId = 9, clock, newId)
         engine.startNew(seed = 42)
         val session = engine.session!!
         assertEquals("active", store.sessions.getValue(session.id).status)
@@ -111,7 +113,7 @@ class EngineTest {
 
     @Test fun savingTheSameTrialTwiceKeepsOne() = runBlocking {
         val store = FakeStore()
-        val engine = SessionEngine(store, Plan, childId = 1, clock, newId)
+        val engine = SessionEngine(store, Plan.activity.id, { Plan }, childId = 1, clock, newId)
         engine.startNew(seed = 1)
         engine.respond("a", correct = true, InputType.Finger)
         engine.respond("a", correct = true, InputType.Finger)
@@ -121,7 +123,7 @@ class EngineTest {
 
     @Test fun stoppingKeepsTrialsAndClosesTheSession() = runBlocking {
         val store = FakeStore()
-        val engine = SessionEngine(store, Plan, childId = 1, clock, newId)
+        val engine = SessionEngine(store, Plan.activity.id, { Plan }, childId = 1, clock, newId)
         engine.startNew(seed = 1)
         val id = engine.session!!.id
         engine.respond("a", correct = true, InputType.Finger); engine.advance()
@@ -133,12 +135,12 @@ class EngineTest {
 
     @Test fun interruptedSessionResumesWithTheSameTrials() = runBlocking {
         val store = FakeStore()
-        val first = SessionEngine(store, Plan, childId = 1, clock, newId)
+        val first = SessionEngine(store, Plan.activity.id, { Plan }, childId = 1, clock, newId)
         first.startNew(seed = 5)
         first.respond("a", correct = true, InputType.Finger); first.advance()
         val nextKey = first.current!!.key
         // The app dies here: nothing else runs. A new engine finds the session and continues it.
-        val second = SessionEngine(store, Plan, childId = 1, clock, newId)
+        val second = SessionEngine(store, Plan.activity.id, { Plan }, childId = 1, clock, newId)
         val (session, saved) = second.interrupted()!!
         assertEquals(1, saved)
         second.resume(session)
@@ -148,12 +150,28 @@ class EngineTest {
 
     @Test fun startingAfreshClosesTheInterruptedSession() = runBlocking {
         val store = FakeStore()
-        val first = SessionEngine(store, Plan, childId = 1, clock, newId)
+        val first = SessionEngine(store, Plan.activity.id, { Plan }, childId = 1, clock, newId)
         first.startNew(seed = 5)
         val old = first.session!!.id
-        val second = SessionEngine(store, Plan, childId = 1, clock, newId)
+        val second = SessionEngine(store, Plan.activity.id, { Plan }, childId = 1, clock, newId)
         second.startNew(seed = 6)
         assertEquals("stopped", store.sessions.getValue(old).status)
         assertEquals(0, second.tokens)
+    }
+
+    /** Each new session is planned from the sessions completed so far, so «play again» moves up (FR-ACT-012). */
+    @Test fun aNewSessionUsesTheLevelEarnedSoFar() = runBlocking {
+        val store = FakeStore()
+        val asked = mutableListOf<Int>()
+        val engine = SessionEngine(store, Plan.activity.id, { asked += it; Plan }, childId = 1, clock, newId)
+        engine.startNew(seed = 1)
+        repeat(Plan.slots) { engine.respond("a", correct = true, InputType.Finger); engine.advance() }
+        engine.startNew(seed = 2)
+        engine.startNew(seed = 3)
+        // The second start stopped an unfinished session, which does not count.
+        assertEquals(listOf(0, 1, 1), asked)
+        val resumed = SessionEngine(store, Plan.activity.id, { asked += it; Plan }, childId = 1, clock, newId)
+        resumed.resume(resumed.interrupted()!!.first)
+        assertEquals(1, asked.last())
     }
 }

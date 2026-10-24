@@ -58,13 +58,24 @@ fun PointerType.toInput(): InputType = when (this) {
  * level the ring pulses larger. A solved tile turns to its tint with a check badge, so success is not colour alone.
  */
 @Composable
-fun AnswerTile(key: String, correct: Boolean, scope: TaskScope, hue: Hue, description: String, modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
-    val solved = scope.solvedKey == key
+fun AnswerTile(
+    key: String,
+    correct: Boolean,
+    scope: TaskScope,
+    hue: Hue,
+    description: String,
+    modifier: Modifier = Modifier,
+    done: Boolean = false,
+    onAnswer: ((InputType, Offset?) -> Unit)? = null,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    // [done]: a step already completed in a multi-step trial; [onAnswer] replaces the default response.
+    val solved = scope.solvedKey == key || done
     val hint = correct && !scope.solved && scope.level >= Ladder.Hint
     val model = correct && !scope.solved && scope.level >= Ladder.Model
     var pressed by remember { mutableStateOf(false) }
     var center by remember { mutableStateOf<Offset?>(null) }
-    val respond by rememberUpdatedState { input: InputType -> scope.respond(key, correct, input, center) }
+    val respond by rememberUpdatedState { input: InputType -> if (onAnswer != null) onAnswer(input, center) else scope.respond(key, correct, input, center) }
     val shake = remember { Animatable(0f) }
     LaunchedEffect(scope.wrongTick) {
         if (scope.wrongKey == key && scope.wrongTick > 0 && !scope.reducedMotion) shake.animateTo(0f, keyframes { durationMillis = 380; -14f at 70; 12f at 160; -7f at 250; 0f at 380 })

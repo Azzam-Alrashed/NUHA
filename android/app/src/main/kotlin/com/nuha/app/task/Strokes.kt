@@ -13,17 +13,23 @@ data class SavedStroke(val tool: InputType, val points: List<StrokePoint>)
  * Plain text keeps records readable and needs no extra library.
  */
 object StrokeCodec {
+    /** Separates drawing attempts within one trial's strokes. */
+    const val AttemptBreak = "\n#\n"
+
     fun encode(strokes: List<SavedStroke>): String = strokes.joinToString("\n") { s ->
         s.tool.id + "|" + s.points.joinToString(";") { "%.4f,%.4f,%d".format(java.util.Locale.ROOT, it.x, it.y, it.elapsedMs) }
     }
 
-    fun decode(text: String): List<SavedStroke> = text.lineSequence().filter { it.isNotBlank() }.map { line ->
+    /** All strokes of all attempts; use [attempts] to keep them apart. */
+    fun decode(text: String): List<SavedStroke> = text.lineSequence().filter { it.isNotBlank() && it != "#" }.map { line ->
         val (tool, pts) = line.split("|", limit = 2)
         SavedStroke(
             InputType.entries.firstOrNull { it.id == tool } ?: InputType.Other,
             pts.split(";").filter { it.isNotBlank() }.map { p -> p.split(",").let { StrokePoint(it[0].toFloat(), it[1].toFloat(), it[2].toLong()) } },
         )
     }.toList()
+
+    fun attempts(text: String): List<List<SavedStroke>> = text.split(AttemptBreak).map(::decode)
 }
 
 /**

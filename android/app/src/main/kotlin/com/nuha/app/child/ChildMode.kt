@@ -30,14 +30,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nuha.app.Pending
+import com.nuha.app.activities.ActivityContent
+import com.nuha.app.activities.planFor
 import com.nuha.app.audio.rememberEffects
 import com.nuha.app.audio.rememberSpeech
 import com.nuha.app.data.AppDatabase
 import com.nuha.app.data.ChildProfile
-import com.nuha.app.task.DemoContent
 import com.nuha.app.task.TaskScreen
-import com.nuha.app.task.demoPlanFor
-import androidx.compose.runtime.remember
 import com.nuha.app.ui.identity.ChunkyButton
 import com.nuha.app.ui.identity.LocalIdentity
 import com.nuha.app.ui.identity.NuhaGuide
@@ -96,9 +95,7 @@ fun ChildMode(voice: Boolean, effects: Boolean) {
         }
         else -> {
             val activity = Activity.byId(screen) ?: Activity.Emotions
-            // MILESTONE 2 SCAFFOLDING: every activity runs a stand-in task until milestone 3 builds it.
-            val plan = remember(activity) { demoPlanFor(activity) }
-            TaskScreen(activity, current, plan, voice, effects, onMap = { screen = MAP }) { scope -> DemoContent(activity, scope) }
+            TaskScreen(activity, current, { planFor(activity, it) }, voice, effects, onMap = { screen = MAP }) { scope -> ActivityContent(activity, scope) }
         }
     }
 }

@@ -32,6 +32,13 @@ private fun variableFamily(res: Int, maxWeight: Int) = FontFamily(Weights.map { 
 // Black renders at ExtraBold. Readex Pro (to 700) stays bundled until the on-device harakat test decides between them.
 private val InterfaceFamily = variableFamily(com.nuha.app.R.font.baloo_bhaijaan_2, 800)
 private fun TextStyle.arabic() = copy(fontFamily = InterfaceFamily, letterSpacing = 0.sp)
+/**
+ * Learning content (letters, words and sentences the child is learning to read) is set in simplified Naskh, fully
+ * vowelised, at 28–32 sp with 1.6–1.8× line height (ui-style.md, Typography; FR-ACT-015). Noto Naskh Arabic, 400–700.
+ */
+val LearningFamily = variableFamily(com.nuha.app.R.font.noto_naskh_arabic, 700)
+fun learningText(size: Float = 32f) = TextStyle(fontFamily = LearningFamily, fontWeight = FontWeight.Bold, fontSize = size.sp, lineHeight = (size * 1.7f).sp, letterSpacing = 0.sp)
+
 internal val NuhaTypography = Typography(
     displaySmall = BaseTypography.displaySmall.arabic().copy(fontSize = 44.sp, lineHeight = 66.sp),
     headlineMedium = BaseTypography.headlineMedium.arabic(),

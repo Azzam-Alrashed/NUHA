@@ -60,6 +60,24 @@ object Pending {
     const val TraceTolerance = .06f
 
     /**
+     * PLACEHOLDER (SRS silent on progression; FR-ACT-012 asks only for one factor at a time): an activity's level is the
+     * number of sessions the child has completed on it, capped at the activity's top level.
+     */
+    fun levelFor(completedSessions: Int, top: Int): Int = completedSessions.coerceIn(0, top)
+
+    /** PLACEHOLDER (FR-STR-001; needs observation on the table): share of contact time inside the ring that solves a star run. */
+    const val StarInTargetMin = .6f
+
+    /** PLACEHOLDER OI-10 (maze mechanic): "route", the child draws the ball's path (legacy); the plan describes "walls". */
+    const val MazeMechanic = "route"
+
+    /** PLACEHOLDER (FR-GDN-001 timed mode is an adult setting, milestone 4): the garden runs untimed. */
+    const val GardenTimed = false
+
+    /** PLACEHOLDER (FR-PAT-001 modes are separate; who picks is open): sessions alternate continuation and drawing. */
+    fun patternMode(completedSessions: Int) = if (completedSessions % 2 == 0) "continue" else "draw"
+
+    /**
      * PLACEHOLDER OI-20: the road stop each starting path begins at (FR-HOM-005): the first activity of the matching
      * area in the plan's order. Mixed begins at the first stop on the road.
      */
