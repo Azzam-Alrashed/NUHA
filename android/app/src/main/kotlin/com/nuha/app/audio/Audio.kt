@@ -52,12 +52,19 @@ fun rememberSpeech(enabled: Boolean): Speech? {
 /** Short interface sounds on the effects channel; soft-attack and quiet, never a buzzer (ui-style.md, Sound). */
 class Effects(context: Context) {
     private val pool = SoundPool.Builder()
-        .setMaxStreams(2)
+        .setMaxStreams(3)
         .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
         .build()
     private val pop = pool.load(context, R.raw.pop, 1)
+    private val chime = pool.load(context, R.raw.chime, 1)
+    private val fanfare = pool.load(context, R.raw.fanfare, 1)
 
+    /** A press on a chunky control. */
     fun pop() { pool.play(pop, 1f, 1f, 1, 0, 1f) }
+    /** A star landing in its slot. */
+    fun chime() { pool.play(chime, .9f, .9f, 1, 0, 1f) }
+    /** A full token board. */
+    fun fanfare() { pool.play(fanfare, .9f, .9f, 1, 0, 1f) }
     fun release() = pool.release()
 }
 

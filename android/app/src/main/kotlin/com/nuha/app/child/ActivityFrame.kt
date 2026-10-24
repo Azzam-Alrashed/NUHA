@@ -66,10 +66,18 @@ import com.nuha.app.ui.theme.titleWeight
  * (FR-ACT-014): the map button on the right returns home in one action (FR-HOM-004), and the pause button on the
  * left is always visible and works for the child, with no gate (FR-ACT-009, FR-ADM-004). Pausing covers the task
  * with a rest card offering «نكمل» and «انتهيت». [content] receives whether play is paused, so activities can stop
- * their clocks.
+ * their clocks. [topCenter] sits in the top bar between the badge and pause (the token board); [overlay] covers the
+ * whole frame above the task (flying stars, the resume card).
  */
 @Composable
-fun ActivityFrame(activity: Activity, onMap: () -> Unit, effects: Boolean, content: @Composable BoxScope.(paused: Boolean) -> Unit) {
+fun ActivityFrame(
+    activity: Activity,
+    onMap: () -> Unit,
+    effects: Boolean,
+    topCenter: @Composable () -> Unit = {},
+    overlay: @Composable BoxScope.() -> Unit = {},
+    content: @Composable BoxScope.(paused: Boolean) -> Unit,
+) {
     val c = LocalIdentity.current
     val sounds = rememberEffects(effects)
     val hue = c.activityHue(activity)
@@ -81,11 +89,12 @@ fun ActivityFrame(activity: Activity, onMap: () -> Unit, effects: Boolean, conte
                 RoundIconButton("home", ChildCopy.Map, c.action, sounds, onMap)
                 Spacer(Modifier.width(20.dp))
                 ActivityBadge(activity, hue)
-                Spacer(Modifier.weight(1f))
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { topCenter() }
                 RoundIconButton("pause", ChildCopy.Pause, c.action, sounds) { paused = true }
             }
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { content(paused) }
         }
+        overlay()
         if (paused) PauseCard(sounds, onResume = { paused = false }, onStop = onMap)
     }
 }

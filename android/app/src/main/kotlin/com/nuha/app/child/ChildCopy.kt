@@ -17,4 +17,20 @@ object ChildCopy {
     const val UnderConstruction = "هذا النشاط قيد البناء"
     const val StartHere = "نبدأ من هنا"
     fun stars(earned: Int) = "${Pending.numeral(earned)} من ${Pending.numeral(3)} نجوم"
+
+    // Task screen.
+    const val Repeat = "أعد التعليمة"
+    const val Help = "ساعدني"
+    const val HintLine = "انظر إلى المكان المضيء."
+    fun board(filled: Int, slots: Int) = "${Pending.numeral(filled)} من ${Pending.numeral(slots)} نجوم"
+    const val ResumeQuestion = "نكمل من حيث توقفنا؟"
+    fun resumeSaved(saved: Int, slots: Int) = "جمعت ${Pending.numeral(saved)} من ${Pending.numeral(slots)} نجوم."
+    const val StartOver = "نبدأ من جديد"
+    const val Undo = "تراجع"
+    const val Clear = "امسح"
+
+    // Session celebration (FR-RWD-003).
+    const val Bravo = "أحسنت!"
+    fun celebrate(name: String) = "أحسنت يا $name! ملأت كل النجوم."
+    fun completed(filled: Int, slots: Int) = "أكملت ${Pending.numeral(filled)} من ${Pending.numeral(slots)}"
 }

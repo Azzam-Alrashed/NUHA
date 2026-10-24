@@ -34,6 +34,10 @@ import com.nuha.app.audio.rememberEffects
 import com.nuha.app.audio.rememberSpeech
 import com.nuha.app.data.AppDatabase
 import com.nuha.app.data.ChildProfile
+import com.nuha.app.task.DemoContent
+import com.nuha.app.task.TaskScreen
+import com.nuha.app.task.demoPlanFor
+import androidx.compose.runtime.remember
 import com.nuha.app.ui.identity.ChunkyButton
 import com.nuha.app.ui.identity.LocalIdentity
 import com.nuha.app.ui.identity.NuhaGuide
@@ -47,10 +51,17 @@ import kotlinx.coroutines.launch
 
 /** The child who is playing. Until several profiles are supported (FR-PRF-008, milestone 4) that is the first one. */
 class ChildViewModel(application: Application) : AndroidViewModel(application) {
-    private val children = AppDatabase.get(application).children()
+    private val database = AppDatabase.get(application)
     private val mutable = MutableStateFlow<ChildProfile?>(null)
     val child = mutable.asStateFlow()
-    init { viewModelScope.launch { mutable.value = children.first() } }
+    private val completed = MutableStateFlow<Map<String, Int>>(emptyMap())
+    /** Completed sessions per activity id, for the stars on the map. */
+    val completedSessions = completed.asStateFlow()
+    init { viewModelScope.launch { mutable.value = database.children().first(); refresh() } }
+    fun refresh() = viewModelScope.launch {
+        val id = mutable.value?.id ?: return@launch
+        completed.value = database.records().completedByActivity(id).associate { it.activity to it.completed }
+    }
 }
 
 private const val MAP = "map"
@@ -75,8 +86,9 @@ fun ChildMode(voice: Boolean, effects: Boolean) {
     when (screen) {
         MAP -> {
             BackHandler { screen = GOODBYE }
-            // Stars come from trial records once activities record them (milestone 2); none are earned yet.
-            HomeMap(current, stars = { 0 }, onOpen = { screen = it.id }, onDone = { screen = GOODBYE }, voice = voice, effects = effects)
+            LaunchedEffect(Unit) { model.refresh() }
+            val completed by model.completedSessions.collectAsStateWithLifecycle()
+            HomeMap(current, stars = { Pending.starsFor(completed[it.id] ?: 0) }, onOpen = { screen = it.id }, onDone = { screen = GOODBYE }, voice = voice, effects = effects)
         }
         GOODBYE -> {
             BackHandler { screen = MAP }
@@ -84,8 +96,9 @@ fun ChildMode(voice: Boolean, effects: Boolean) {
         }
         else -> {
             val activity = Activity.byId(screen) ?: Activity.Emotions
-            BackHandler { screen = MAP }
-            ActivityFrame(activity, onMap = { screen = MAP }, effects = effects) { UnderConstruction(activity) }
+            // MILESTONE 2 SCAFFOLDING: every activity runs a stand-in task until milestone 3 builds it.
+            val plan = remember(activity) { demoPlanFor(activity) }
+            TaskScreen(activity, current, plan, voice, effects, onMap = { screen = MAP }) { scope -> DemoContent(activity, scope) }
         }
     }
 }

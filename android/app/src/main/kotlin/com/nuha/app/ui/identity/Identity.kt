@@ -595,6 +595,33 @@ fun NuhaPictogram(kind: String, color: Color, modifier: Modifier = Modifier) {
                 drawRoundRect(color, Offset(26f, 46f), Size(48f, 38f), CornerRadius(6f), style = stroke)
                 drawRoundRect(color, Offset(43f, 62f), Size(14f, 22f), CornerRadius(4f))
             }
+            // Hear the instruction again: a speaker with two sound waves.
+            "speaker" -> {
+                drawPath(Path().apply { moveTo(14f, 40f); lineTo(30f, 40f); lineTo(50f, 22f); lineTo(50f, 78f); lineTo(30f, 60f); lineTo(14f, 60f); close() }, color)
+                drawArc(color, -50f, 100f, false, Offset(46f, 34f), Size(24f, 32f), style = stroke)
+                drawArc(color, -55f, 110f, false, Offset(50f, 22f), Size(38f, 56f), style = stroke)
+            }
+            // Help: a light bulb.
+            "help" -> {
+                drawCircle(color, 24f, 50f toO 40f, style = stroke)
+                drawRoundRect(color, Offset(38f, 64f), Size(24f, 10f), CornerRadius(4f))
+                drawRoundRect(color, Offset(41f, 78f), Size(18f, 8f), CornerRadius(4f))
+                line(50f toO 28f, 50f toO 44f, 5f)
+                drawCircle(color, 3.5f, 50f toO 52f)
+            }
+            // Undo the last stroke: a curved arrow turning back toward the start, which is rightward in RTL.
+            "undo" -> {
+                drawArc(color, 200f, 230f, false, Offset(20f, 24f), Size(56f, 52f), style = Stroke(7f, cap = StrokeCap.Round))
+                drawPath(Path().apply { moveTo(66f, 18f); lineTo(80f, 34f); lineTo(60f, 40f); close() }, color)
+            }
+            // Clear the drawing: an eraser.
+            "clear" -> {
+                rotate(-35f, 50f toO 50f) {
+                    drawRoundRect(color, Offset(18f, 34f), Size(64f, 32f), CornerRadius(8f), style = stroke)
+                    drawRoundRect(color, Offset(18f, 34f), Size(24f, 32f), CornerRadius(8f))
+                }
+                line(30f toO 84f, 82f toO 84f, 5f)
+            }
             // Pause: two rounded bars.
             "pause" -> {
                 drawRoundRect(color, Offset(28f, 22f), Size(16f, 56f), CornerRadius(8f))
