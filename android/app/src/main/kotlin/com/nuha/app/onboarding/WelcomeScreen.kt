@@ -58,6 +58,7 @@ import com.nuha.app.ui.identity.Hue
 import com.nuha.app.ui.identity.LocalIdentity
 import com.nuha.app.ui.identity.LocalReducedMotion
 import com.nuha.app.ui.identity.NuhaGuide
+import com.nuha.app.ui.identity.NuhaLogo
 import com.nuha.app.ui.identity.NuhaPictogram
 import com.nuha.app.ui.theme.buttonWeight
 import com.nuha.app.ui.theme.titleWeight
@@ -115,6 +116,11 @@ fun WelcomeScreen(onStart: () -> Unit, voice: Boolean, effects: Boolean, modifie
         fun x(f: Float) = w * (f / 640f)
         fun y(f: Float) = h * (f / 400f)
         Scenery(Modifier.fillMaxSize())
+        // The logo sits in the sky just inside the sun, clear of the clouds and the guide's bubble.
+        NuhaLogo(
+            Modifier.placeAt(x(566f), y(34f), alignX = 1f).graphicsLayer { alpha = bubbleIn.value.coerceIn(0f, 1f) },
+            style = MaterialTheme.typography.displaySmall.titleWeight(),
+        )
 
         val stop1 = Offset(357f, 232f)
         RoadStop(c.emotions, "emotions", 120.dp, Modifier.placeAt(x(44f), y(96f)))

@@ -401,29 +401,53 @@ fun NuhaGuide(modifier: Modifier = Modifier, gaze: Offset = Offset.Zero, descrip
         with(drawContext.canvas) { save(); translate((size.width - 300*s)/2, (size.height - 300*s)/2); scale(s, s) }
         val h = c.guide
         groundShadow(h.lip, 150f toO 290f, 210f * (1f - hop.value * .3f))
-        translate(top = -hop.value * 28.dp.toPx() / s) {
-            val flower = Path().apply {
-                for ((x, y, r) in listOf(Triple(150f, 78f, 64f), Triple(226f, 134f, 64f), Triple(198f, 222f, 64f), Triple(102f, 222f, 64f), Triple(74f, 134f, 64f), Triple(150f, 158f, 80f)))
-                    addOval(androidx.compose.ui.geometry.Rect(Offset(x, y), r))
-            }
-            drawPath(flower, Brush.verticalGradient(listOf(h.fill.lifted(c.lift), h.fill), 14f, 286f))
-            // A soft shine on the top petal, the one highlight soft-flat allows.
-            rotate(-24f, 128f toO 50f) { drawOval(Color.White.copy(alpha = if (c.highContrast) 0f else .32f), Offset(110f, 42f), Size(38f, 17f)) }
-            // Face: large and set low in the centre so the flower reads as a character first.
-            val look = Offset(gaze.x.coerceIn(-1f, 1f) * 10f, gaze.y.coerceIn(-1f, 1f) * 10f + 2f)
-            for (x in listOf(120f, 180f)) {
-                drawOval(Color.White, Offset(x - 29f, 118f), Size(58f, 66f))
-                drawCircle(c.ink, 18f, Offset(x, 151f) + look)
-                drawCircle(Color.White, 5f, Offset(x + 5f, 144f) + look)
-            }
-            // Three lashes per eye, fanned to the outer side so the two sets never meet.
-            for (side in listOf(-1f, 1f)) for ((a, b) in listOf((97f toO 130f) to (85f toO 119f), (106f toO 122f) to (99f toO 108f), (118f toO 118f) to (115f toO 103f))) {
-                fun m(o: Offset) = if (side < 0) o else Offset(300f - o.x, o.y)
-                drawLine(c.ink, m(a), m(b), 5.5f, StrokeCap.Round)
-            }
-            drawPath(Path().apply { moveTo(136f, 203f); quadraticTo(150f, 217f, 164f, 203f) }, c.ink, style = Stroke(6.5f, cap = StrokeCap.Round))
-        }
+        translate(top = -hop.value * 28.dp.toPx() / s) { flower(c, gaze) }
         drawContext.canvas.restore()
+    }
+}
+
+/**
+ * The guide's flower and face in its 300×300 content box, shared by [NuhaGuide] and [NuhaLogo].
+ * tools/brand/make_logo.py copies this geometry into the launcher icon; keep the two in step.
+ */
+private fun DrawScope.flower(c: IdentityPalette, gaze: Offset) {
+    val h = c.guide
+    val flower = Path().apply {
+        for ((x, y, r) in listOf(Triple(150f, 78f, 64f), Triple(226f, 134f, 64f), Triple(198f, 222f, 64f), Triple(102f, 222f, 64f), Triple(74f, 134f, 64f), Triple(150f, 158f, 80f)))
+            addOval(androidx.compose.ui.geometry.Rect(Offset(x, y), r))
+    }
+    drawPath(flower, Brush.verticalGradient(listOf(h.fill.lifted(c.lift), h.fill), 14f, 286f))
+    // A soft shine on the top petal, the one highlight soft-flat allows.
+    rotate(-24f, 128f toO 50f) { drawOval(Color.White.copy(alpha = if (c.highContrast) 0f else .32f), Offset(110f, 42f), Size(38f, 17f)) }
+    // Face: large and set low in the centre so the flower reads as a character first.
+    val look = Offset(gaze.x.coerceIn(-1f, 1f) * 10f, gaze.y.coerceIn(-1f, 1f) * 10f + 2f)
+    for (x in listOf(120f, 180f)) {
+        drawOval(Color.White, Offset(x - 29f, 118f), Size(58f, 66f))
+        drawCircle(c.ink, 18f, Offset(x, 151f) + look)
+        drawCircle(Color.White, 5f, Offset(x + 5f, 144f) + look)
+    }
+    // Three lashes per eye, fanned to the outer side so the two sets never meet.
+    for (side in listOf(-1f, 1f)) for ((a, b) in listOf((97f toO 130f) to (85f toO 119f), (106f toO 122f) to (99f toO 108f), (118f toO 118f) to (115f toO 103f))) {
+        fun m(o: Offset) = if (side < 0) o else Offset(300f - o.x, o.y)
+        drawLine(c.ink, m(a), m(b), 5.5f, StrokeCap.Round)
+    }
+    drawPath(Path().apply { moveTo(136f, 203f); quadraticTo(150f, 217f, 164f, 203f) }, c.ink, style = Stroke(6.5f, cap = StrokeCap.Round))
+}
+
+/**
+ * The NUHA logo lockup: the guide's flower beside the نُهى wordmark in heavy rounded ink.
+ * Read out once as the app name; static, so it never competes with the guide for attention.
+ */
+@Composable
+fun NuhaLogo(modifier: Modifier = Modifier, height: Dp = 72.dp, style: TextStyle = TextStyle.Default) {
+    val c = LocalIdentity.current
+    Row(modifier.clearAndSetSemantics { contentDescription = "نُهى" }, verticalAlignment = Alignment.CenterVertically) {
+        Canvas(Modifier.size(height)) {
+            val s = size.minDimension / 300f
+            scale(s, s, Offset.Zero) { flower(c, Offset(0f, .3f)) }
+        }
+        Spacer(Modifier.width(height * .12f))
+        Text("نُهى", color = c.ink, style = style.copy(fontSize = (height.value * .62f).sp, lineHeight = (height.value * .9f).sp))
     }
 }
 

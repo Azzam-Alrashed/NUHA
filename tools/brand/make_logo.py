@@ -1,0 +1,202 @@
+"""Generates the NUHA logo assets from the flower guide in ui/identity/Identity.kt (NuhaGuide).
+
+Run from the repo root: python3 tools/brand/make_logo.py
+Writes the adaptive launcher icon layers (foreground, background, themed monochrome) and docs/brand/nuha-logo.svg.
+The flower is drawn in the guide's 300×300 content box, so its geometry must stay in step with NuhaGuide.
+"""
+from math import atan2, cos, hypot, pi, sin
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+RES = ROOT / 'android/app/src/main/res'
+
+INK = '#1E2A4A'
+FILL, LIFT, LIP = '#FF8B8B', '#FF9C9C', '#D47373'  # Mona Lisa fill, fill lifted 8%, lip
+GROUND, ROAD, SUN = '#FFD866', '#FFEDB0', '#FFB356'
+
+PETALS = [(150, 78), (226, 134), (198, 222), (102, 222), (74, 134)]  # clockwise from the top
+PETAL_R, CENTRE, CENTRE_R = 64, (150, 158), 80
+EYES = [120, 180]
+LASHES = [((97, 130), (85, 119)), ((106, 122), (99, 108)), ((118, 118), (115, 103))]
+LASHES += [((300 - a[0], a[1]), (300 - b[0], b[1])) for a, b in LASHES]
+SMILE = ((136, 203), (150, 217), (164, 203))
+
+# Icon placement: the flower (radius ~150 about (150,152)) fits inside the 66dp safe zone of the 108dp canvas.
+SCALE = .21
+TX, TY = 54 - 150 * SCALE, 52 - 152 * SCALE
+
+
+def f(v):
+    return f'{v:.2f}'.rstrip('0').rstrip('.')
+
+
+def circle(cx, cy, r, sweep=1):
+    return f'M{f(cx - r)},{f(cy)} A{f(r)},{f(r)} 0 1,{sweep} {f(cx + r)},{f(cy)} A{f(r)},{f(r)} 0 1,{sweep} {f(cx - r)},{f(cy)} Z'
+
+
+def ellipse(cx, cy, rx, ry):
+    return f'M{f(cx - rx)},{f(cy)} A{f(rx)},{f(ry)} 0 1,1 {f(cx + rx)},{f(cy)} A{f(rx)},{f(ry)} 0 1,1 {f(cx - rx)},{f(cy)} Z'
+
+
+def outer_intersection(a, b, r):
+    """The intersection of two equal circles that lies farther from the flower's middle."""
+    mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+    d = hypot(b[0] - a[0], b[1] - a[1])
+    h = (r * r - (d / 2) ** 2) ** .5
+    ux, uy = (b[0] - a[0]) / d, (b[1] - a[1]) / d
+    pts = [(mx - uy * h, my + ux * h), (mx + uy * h, my - ux * h)]
+    return max(pts, key=lambda p: hypot(p[0] - 150, p[1] - 152))
+
+
+def silhouette():
+    """Outline of the union of the five petals, as one clockwise path of arcs."""
+    n = len(PETALS)
+    joins = [outer_intersection(PETALS[i], PETALS[(i + 1) % n], PETAL_R) for i in range(n)]
+    # The centre disc must sit fully inside the petals, or it would poke out of this outline.
+    for k in range(360):
+        t = k * pi / 180
+        p = (CENTRE[0] + CENTRE_R * cos(t), CENTRE[1] + CENTRE_R * sin(t))
+        assert any(hypot(p[0] - c[0], p[1] - c[1]) <= PETAL_R + .5 for c in PETALS), p
+    start = joins[-1]
+    d = f'M{f(start[0])},{f(start[1])}'
+    for i, c in enumerate(PETALS):
+        a, b = joins[i - 1], joins[i]
+        span = (atan2(b[1] - c[1], b[0] - c[0]) - atan2(a[1] - c[1], a[0] - c[0])) % (2 * pi)
+        d += f' A{PETAL_R},{PETAL_R} 0 {1 if span > pi else 0},1 {f(b[0])},{f(b[1])}'
+    return d + ' Z'
+
+
+def capsule(points, w):
+    """A round-capped stroke of width [w] along [points], as a closed outline (for cutting holes)."""
+    r = w / 2
+    left, right = [], []
+    for i, p in enumerate(points):
+        q0, q1 = points[max(i - 1, 0)], points[min(i + 1, len(points) - 1)]
+        dx, dy = q1[0] - q0[0], q1[1] - q0[1]
+        l = hypot(dx, dy)
+        nx, ny = -dy / l * r, dx / l * r
+        left.append((p[0] + nx, p[1] + ny)); right.append((p[0] - nx, p[1] - ny))
+    d = f'M{f(left[0][0])},{f(left[0][1])}' + ''.join(f' L{f(x)},{f(y)}' for x, y in left[1:])
+    d += f' A{f(r)},{f(r)} 0 0,0 {f(right[-1][0])},{f(right[-1][1])}'
+    d += ''.join(f' L{f(x)},{f(y)}' for x, y in reversed(right[:-1]))
+    return d + f' A{f(r)},{f(r)} 0 0,0 {f(left[0][0])},{f(left[0][1])} Z'
+
+
+def quad(p0, p1, p2, n=12):
+    return [((1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0],
+             (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1]) for t in (i / n for i in range(n + 1))]
+
+
+def lash(a, b, trim=3):
+    """Pulls the lash's root [trim] units off the eye so a cut-out never overlaps the eye's own hole."""
+    l = hypot(b[0] - a[0], b[1] - a[1])
+    return [(a[0] + (b[0] - a[0]) * trim / l, a[1] + (b[1] - a[1]) * trim / l), b]
+
+
+petals = ' '.join(circle(x, y, PETAL_R) for x, y in PETALS) + ' ' + circle(*CENTRE, CENTRE_R)
+whites = ' '.join(ellipse(x, 151, 29, 33) for x in EYES)
+pupils = ' '.join(circle(x, 153, 18) for x in EYES)
+glints = ' '.join(circle(x + 5, 146, 5) for x in EYES)
+lashes = ' '.join(f'M{a[0]},{a[1]} L{b[0]},{b[1]}' for a, b in LASHES)
+smile = 'M{},{} Q{},{} {},{}'.format(*SMILE[0], *SMILE[1], *SMILE[2])
+shine = ellipse(129, 50.5, 19, 8.5)
+# Even-odd: the eyes cut holes, the pupils fill them again, the glints, lashes and smile cut through.
+mono = ' '.join([silhouette(), whites, pupils, glints, *(capsule(lash(a, b), 5.5) for a, b in LASHES), capsule(quad(*SMILE), 6.5)])
+
+XML = '<?xml version="1.0" encoding="utf-8"?>\n<!-- Generated by tools/brand/make_logo.py; edit the script, not this file. -->\n'
+
+foreground = XML + f'''<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:translateX="{f(TX)}" android:translateY="{f(TY)}" android:scaleX="{SCALE}" android:scaleY="{SCALE}">
+        <path android:fillColor="{LIP}" android:fillAlpha="0.28" android:pathData="{ellipse(150, 290, 92, 15)}" />
+        <path android:pathData="{petals}">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="linear" android:startX="0" android:startY="14" android:endX="0" android:endY="286"
+                    android:startColor="{LIFT}" android:endColor="{FILL}" />
+            </aapt:attr>
+        </path>
+        <group android:rotation="-24" android:pivotX="128" android:pivotY="50">
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.32" android:pathData="{shine}" />
+        </group>
+        <path android:fillColor="#FFFFFF" android:pathData="{whites}" />
+        <path android:fillColor="{INK}" android:pathData="{pupils}" />
+        <path android:fillColor="#FFFFFF" android:pathData="{glints}" />
+        <path android:strokeColor="{INK}" android:strokeWidth="5.5" android:strokeLineCap="round" android:pathData="{lashes}" />
+        <path android:strokeColor="{INK}" android:strokeWidth="6.5" android:strokeLineCap="round" android:pathData="{smile}" />
+    </group>
+</vector>
+'''
+
+# The welcome road in miniature: sunny ground, a corner of sun and the road the guide stands on.
+ROAD_PATH = 'M-6,90 C24,72 52,98 80,84 C94,77 104,76 114,78'
+background = XML + f'''<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="{GROUND}" android:pathData="M0,0 H108 V108 H0 Z" />
+    <path android:fillColor="{SUN}" android:pathData="{circle(90, 18, 17)}" />
+    <path android:strokeColor="{ROAD}" android:strokeWidth="17" android:strokeLineCap="round" android:pathData="{ROAD_PATH}" />
+</vector>
+'''
+
+monochrome = XML + f'''<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:translateX="{f(TX)}" android:translateY="{f(TY)}" android:scaleX="{SCALE}" android:scaleY="{SCALE}">
+        <path android:fillColor="#FFFFFF" android:fillType="evenOdd" android:pathData="{mono}" />
+    </group>
+</vector>
+'''
+
+adaptive = XML + '''<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_monochrome" />
+</adaptive-icon>
+'''
+
+# Master logo: the icon's visible 72dp square as a rounded tile.
+svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="18 18 72 72" width="1024" height="1024">
+  <!-- Generated by tools/brand/make_logo.py. NUHA logo: the flower guide on the sunny road. -->
+  <defs>
+    <clipPath id="tile"><rect x="18" y="18" width="72" height="72" rx="17" /></clipPath>
+    <linearGradient id="petal" gradientUnits="userSpaceOnUse" x1="0" y1="14" x2="0" y2="286">
+      <stop offset="0" stop-color="{LIFT}" /><stop offset="1" stop-color="{FILL}" />
+    </linearGradient>
+  </defs>
+  <g clip-path="url(#tile)">
+    <rect width="108" height="108" fill="{GROUND}" />
+    <path d="{circle(90, 18, 17)}" fill="{SUN}" />
+    <path d="{ROAD_PATH}" fill="none" stroke="{ROAD}" stroke-width="17" stroke-linecap="round" />
+    <g transform="translate({f(TX)} {f(TY)}) scale({SCALE})">
+      <path d="{ellipse(150, 290, 92, 15)}" fill="{LIP}" fill-opacity=".28" />
+      <path d="{petals}" fill="url(#petal)" />
+      <path d="{shine}" fill="#FFFFFF" fill-opacity=".32" transform="rotate(-24 128 50)" />
+      <path d="{whites}" fill="#FFFFFF" />
+      <path d="{pupils}" fill="{INK}" />
+      <path d="{glints}" fill="#FFFFFF" />
+      <path d="{lashes}" fill="none" stroke="{INK}" stroke-width="5.5" stroke-linecap="round" />
+      <path d="{smile}" fill="none" stroke="{INK}" stroke-width="6.5" stroke-linecap="round" />
+    </g>
+  </g>
+</svg>
+'''
+
+for path, text in {
+    RES / 'drawable/ic_launcher_foreground.xml': foreground,
+    RES / 'drawable/ic_launcher_background.xml': background,
+    RES / 'drawable/ic_launcher_monochrome.xml': monochrome,
+    RES / 'mipmap-anydpi-v26/ic_launcher.xml': adaptive,
+    RES / 'mipmap-anydpi-v26/ic_launcher_round.xml': adaptive,
+    ROOT / 'docs/brand/nuha-logo.svg': svg,
+}.items():
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+    print(path.relative_to(ROOT))
