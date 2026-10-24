@@ -51,6 +51,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nuha.app.DraftArabic
+import com.nuha.app.Pending
 import com.nuha.app.audio.rememberEffects
 import com.nuha.app.audio.rememberSpeech
 import com.nuha.app.ui.identity.ChunkyButton
@@ -60,6 +62,14 @@ import com.nuha.app.ui.identity.LocalReducedMotion
 import com.nuha.app.ui.identity.NuhaGuide
 import com.nuha.app.ui.identity.NuhaLogo
 import com.nuha.app.ui.identity.NuhaPictogram
+import com.nuha.app.ui.scene.BubbleTail
+import com.nuha.app.ui.scene.BubbleTailInset
+import com.nuha.app.ui.scene.SpeechBubble
+import com.nuha.app.ui.scene.drawSky
+import com.nuha.app.ui.scene.placeAt
+import com.nuha.app.ui.scene.bloom
+import com.nuha.app.ui.scene.bush
+import com.nuha.app.ui.scene.star
 import com.nuha.app.ui.theme.buttonWeight
 import com.nuha.app.ui.theme.titleWeight
 import kotlinx.coroutines.delay
@@ -68,7 +78,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sin
 
-private const val GREETING = "أهلاً! أنا نُهى"
+@DraftArabic private const val GREETING = "أهلاً! أنا ${Pending.GuideName}"
 /** Quiet time before the guide looks at the start button and the button bobs once. */
 private const val INVITE_AFTER_MILLIS = 5000L
 private const val GUIDE_SIZE = 280
@@ -221,21 +231,6 @@ private fun Scenery(modifier: Modifier) {
     }
 }
 
-private fun DrawScope.bush(hue: Hue, center: Offset, r: Float) {
-    for ((dx, dy, k) in listOf(Triple(-.8f, .25f, .75f), Triple(.8f, .25f, .75f), Triple(0f, 0f, 1f))) {
-        drawCircle(hue.lip, k * r, center + Offset(dx * r, dy * r + .12f * r))
-        drawCircle(hue.fill, k * r, center + Offset(dx * r, dy * r))
-    }
-}
-
-private fun DrawScope.bloom(petal: Hue, heart: Color, center: Offset, r: Float) {
-    for (i in 0 until 5) {
-        val a = i * 2 * PI / 5 - PI / 2
-        drawCircle(petal.fill, r, center + Offset((kotlin.math.cos(a) * r).toFloat(), (sin(a) * r).toFloat()))
-    }
-    drawCircle(heart, .6f * r, center)
-}
-
 /** A white chunky tile on the road: an activity's pictogram in its hue over three empty stars to earn. Decorative here. */
 @Composable
 private fun RoadStop(hue: Hue, kind: String, size: Dp, modifier: Modifier) {
@@ -260,16 +255,4 @@ private fun RoadStop(hue: Hue, kind: String, size: Dp, modifier: Modifier) {
             contentAlignment = Alignment.Center,
         ) { NuhaPictogram(kind, hue.onFill, Modifier.size(size * .38f)) }
     }
-}
-
-private fun DrawScope.star(color: Color, center: Offset, r: Float) {
-    val path = Path()
-    for (i in 0 until 10) {
-        val a = i * PI / 5 - PI / 2
-        val k = if (i % 2 == 0) r else r * .48f
-        val pt = center + Offset((kotlin.math.cos(a) * k).toFloat(), (sin(a) * k).toFloat())
-        if (i == 0) path.moveTo(pt.x, pt.y) else path.lineTo(pt.x, pt.y)
-    }
-    path.close()
-    drawPath(path, color)
 }

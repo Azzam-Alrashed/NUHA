@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuha.app.Pending
 import com.nuha.app.data.AppDatabase
 import com.nuha.app.data.ChildProfile
 import kotlinx.coroutines.launch
@@ -18,7 +19,7 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
 
     var avatar by mutableStateOf<String?>(null)
     var name by mutableStateOf("")
-    var age by mutableIntStateOf(4)
+    var age by mutableIntStateOf(Pending.DefaultAge)
     val answers = mutableStateListOf<Answer?>().apply { repeat(Questions.size) { add(null) } }
     /** Index of the question on screen; [Questions].size means the starting-path result. */
     var question by mutableIntStateOf(0)

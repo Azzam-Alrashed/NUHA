@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nuha.app.child.ChildMode
 import com.nuha.app.data.PreferencesViewModel
 import com.nuha.app.onboarding.OnboardingViewModel
 import com.nuha.app.onboarding.QuestionsScreen
@@ -35,7 +36,7 @@ fun NuhaApp() {
         when {
             // Wait for the saved appearance so a muted child never sees the colourful default first.
             current == null -> Placeholder(if (error) "تعذّر تحميل الإعدادات. أعد فتح التطبيق للمحاولة مجدداً." else "")
-            current.onboardingComplete -> Placeholder("الخريطة قيد البناء")
+            current.onboardingComplete -> ChildMode(voice = current.voice, effects = current.effects)
             screen == "welcome" -> WelcomeScreen(onStart = { screen = "who" }, voice = current.voice, effects = current.effects)
             screen == "who" -> {
                 BackHandler { screen = "welcome" }

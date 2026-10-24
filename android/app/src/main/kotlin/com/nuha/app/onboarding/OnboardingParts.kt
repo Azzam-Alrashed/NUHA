@@ -67,79 +67,18 @@ import com.nuha.app.ui.identity.LocalIdentity
 import com.nuha.app.ui.identity.NuhaGuide
 import com.nuha.app.ui.identity.Scene
 import com.nuha.app.ui.identity.pressSink
+import com.nuha.app.ui.scene.BubbleTail
+import com.nuha.app.ui.scene.BubbleTailInset
+import com.nuha.app.ui.scene.SpeechBubble
+import com.nuha.app.ui.scene.drawSky
+import com.nuha.app.ui.scene.placeAt
 import com.nuha.app.ui.theme.buttonWeight
 import com.nuha.app.ui.theme.titleWeight
 
 internal const val BUTTON_HEIGHT = 108
 /** Centre of the primary button as a fraction of the width. The welcome guide stands here, so the button never moves between steps. */
 internal const val PRIMARY_X = 531f / 640f
-/** Distance from a downward bubble's right edge to its tail, so the tail can sit over the speaker. */
-internal val BubbleTailInset = 92.dp
 internal const val ONBOARDING_STEPS = 3
-
-/**
- * Places the element so the point ([alignX], [alignY]) of its own box lands on ([x], [y]), in absolute
- * (left-based) coordinates. It reports zero size, so siblings in a Box are unaffected.
- */
-internal fun Modifier.placeAt(x: Dp, y: Dp, alignX: Float = .5f, alignY: Float = .5f) = layout { measurable, constraints ->
-    val p = measurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
-    layout(0, 0) { p.place((x.roundToPx() - alignX * p.width).toInt(), (y.roundToPx() - alignY * p.height).toInt()) }
-}
-
-/** The shared sky of every onboarding step: sun, soft hills and two flat clouds, in 640×400 sketch coordinates. */
-internal fun DrawScope.drawSky(scene: Scene) {
-    fun p(x: Float, y: Float) = Offset(size.width * x / 640f, size.height * y / 400f)
-    val u = size.width / 640f
-    drawCircle(scene.sun, 46f * u, p(622f, 14f))
-    drawOval(scene.hill, Offset(-140f * u, 330f * u), Size(400f * u, 200f * u))
-    drawOval(scene.hill, Offset(170f * u, 360f * u), Size(300f * u, 160f * u))
-    cloud(scene.cloud, p(214f, 62f), 20f * u)
-    cloud(scene.cloud, p(318f, 40f), 13f * u)
-}
-
-private fun DrawScope.cloud(color: Color, center: Offset, r: Float) {
-    drawRoundRect(color, center + Offset(-1.6f * r, -.2f * r), Size(3.2f * r, 1.2f * r), CornerRadius(.6f * r))
-    drawCircle(color, .75f * r, center + Offset(-.6f * r, -.1f * r))
-    drawCircle(color, r, center + Offset(.4f * r, -.35f * r))
-}
-
-internal enum class BubbleTail { Down, Right }
-
-/**
- * Pill speech bubble. A [BubbleTail.Down] tail sits [BubbleTailInset] from the right edge; a [BubbleTail.Right]
- * tail points right from the middle, at a speaker beside the bubble. Tail sides are absolute, not mirrored.
- */
-@Composable
-internal fun SpeechBubble(text: String, modifier: Modifier, tail: BubbleTail = BubbleTail.Down, fontSize: TextUnit = 44.sp) {
-    val c = LocalIdentity.current
-    val tailSize = 26.dp
-    Box(
-        modifier
-            .drawBehind {
-                val t = tailSize.toPx()
-                val body = if (tail == BubbleTail.Down) Size(size.width, size.height - t) else Size(size.width - t, size.height)
-                drawRoundRect(c.scene.bubble, Offset.Zero, body, CornerRadius(body.height / 2))
-                val half = 20.dp.toPx()
-                drawPath(Path().apply {
-                    if (tail == BubbleTail.Down) {
-                        val x = size.width - BubbleTailInset.toPx()
-                        moveTo(x - half, body.height - 1f); lineTo(x, size.height); lineTo(x + half, body.height - 1f)
-                    } else {
-                        val y = body.height / 2
-                        moveTo(body.width - 1f, y - half * .8f); lineTo(size.width, y); lineTo(body.width - 1f, y + half * .8f)
-                    }
-                    close()
-                }, c.scene.bubble)
-            }
-            .absolutePadding(
-                left = 40.dp, right = 40.dp + if (tail == BubbleTail.Right) tailSize else 0.dp,
-                top = 10.dp, bottom = 10.dp + if (tail == BubbleTail.Down) tailSize else 0.dp,
-            )
-            .semantics { heading() },
-    ) {
-        Text(text, style = MaterialTheme.typography.displaySmall.titleWeight().copy(fontSize = fontSize, lineHeight = fontSize * 1.5f), color = c.ink)
-    }
-}
 
 /** Progress through onboarding: the current step is a wide pill, the others small dots. */
 @Composable

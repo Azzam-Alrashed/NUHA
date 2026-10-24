@@ -64,10 +64,12 @@ abstract class AppDatabase : RoomDatabase() {
                 )
             }
         }
+        /** Every migration, oldest first; tests open old databases through these. */
+        val Migrations = arrayOf(AddChildProfiles)
+        fun build(context: android.content.Context, name: String): AppDatabase =
+            Room.databaseBuilder(context, AppDatabase::class.java, name).addMigrations(*Migrations).build()
         fun get(application: Application): AppDatabase = instance ?: synchronized(this) {
-            instance ?: Room.databaseBuilder(application, AppDatabase::class.java, "nuha-app.db")
-                .addMigrations(AddChildProfiles)
-                .build().also { instance = it }
+            instance ?: build(application, "nuha-app.db").also { instance = it }
         }
     }
 }

@@ -466,12 +466,12 @@ fun IdentityPalette.avatarHue(kind: String): Hue = when (kind) {
 
 /**
  * A shape buddy: a flat body in its hue with the guide's eyes and smile and no limbs, in a 100×100 content box.
- * [gaze] (-1..1 per axis) moves the pupils.
+ * [gaze] (-1..1 per axis) moves the pupils. [hue] overrides the buddy's own hue, for activity mascots.
  */
 @Composable
-fun NuhaAvatar(kind: String, modifier: Modifier = Modifier, gaze: Offset = Offset.Zero) {
+fun NuhaAvatar(kind: String, modifier: Modifier = Modifier, gaze: Offset = Offset.Zero, hue: Hue? = null) {
     val c = LocalIdentity.current
-    val h = c.avatarHue(kind)
+    val h = hue ?: c.avatarHue(kind)
     Canvas(modifier.clearAndSetSemantics {}) {
         val s = min(size.width, size.height) / 100f
         with(drawContext.canvas) { save(); translate((size.width - 100*s)/2, (size.height - 100*s)/2); scale(s, s) }
@@ -547,8 +547,72 @@ fun NuhaPictogram(kind: String, color: Color, modifier: Modifier = Modifier) {
                 drawCircle(color, 14f, 76f toO 74f, style = Stroke(5f))
                 line(70f toO 78f, 82f toO 78f, 4f)
             }
+            // Environment: a sun beside a cloud.
+            "environment" -> {
+                drawCircle(color, 13f, 34f toO 36f, style = stroke)
+                for (i in 0 until 8) { val a = i * PI / 4; line(Offset(34f + (19 * cos(a)).toFloat(), 36f + (19 * sin(a)).toFloat()), Offset(34f + (25 * cos(a)).toFloat(), 36f + (25 * sin(a)).toFloat()), 5f) }
+                drawRoundRect(color, Offset(36f, 60f), Size(52f, 22f), CornerRadius(11f))
+                drawCircle(color, 14f, 52f toO 60f); drawCircle(color, 11f, 70f toO 62f)
+            }
+            // Path: two friends joined by a winding route.
+            "path" -> {
+                drawCircle(color, 10f, 20f toO 76f); drawCircle(color, 10f, 80f toO 24f)
+                drawPath(Path().apply { moveTo(28f, 68f); cubicTo(70f, 74f, 20f, 30f, 72f, 32f) }, color, style = Stroke(6f, cap = StrokeCap.Round, pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(9f, 9f))))
+            }
+            // Star tracking: a star inside its tracking ring.
+            "star" -> {
+                drawCircle(color, 38f, 50f toO 50f, style = Stroke(5f))
+                drawPath(starPath(50f toO 52f, 26f), color)
+            }
+            // Maze: walls and a ball heading for the exit.
+            "maze" -> {
+                drawRoundRect(color, Offset(14f, 14f), Size(72f, 72f), CornerRadius(12f), style = stroke)
+                line(38f toO 14f, 38f toO 58f); line(62f toO 42f, 62f toO 86f)
+                drawCircle(color, 8f, 26f toO 74f)
+            }
+            // Garden: a flower on its stem.
+            "garden" -> {
+                line(50f toO 56f, 50f toO 88f)
+                drawPath(Path().apply { moveTo(50f, 76f); quadraticTo(66f, 62f, 76f, 70f); quadraticTo(64f, 82f, 50f, 76f) }, color)
+                for (i in 0 until 5) { val a = i * 2 * PI / 5 - PI / 2; drawCircle(color, 11f, Offset(50f + (15 * cos(a)).toFloat(), 36f + (15 * sin(a)).toFloat())) }
+            }
+            // Patterns: circle, triangle, square, in sequence.
+            "patterns" -> {
+                drawCircle(color, 12f, 20f toO 50f)
+                drawPath(Path().apply { moveTo(50f, 36f); lineTo(64f, 62f); lineTo(36f, 62f); close() }, color, style = Stroke(5f, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+                drawRoundRect(color, Offset(70f, 38f), Size(22f, 24f), CornerRadius(4f))
+            }
+            // Balance: a beam on a stand with two pans.
+            "balance" -> {
+                line(50f toO 24f, 50f toO 82f); line(32f toO 84f, 68f toO 84f)
+                line(16f toO 32f, 84f toO 32f)
+                drawArc(color, 0f, 180f, true, Offset(6f, 42f), Size(26f, 18f)); drawArc(color, 0f, 180f, true, Offset(68f, 42f), Size(26f, 18f))
+                line(19f toO 32f, 14f toO 50f, 3f); line(19f toO 32f, 24f toO 50f, 3f); line(81f toO 32f, 76f toO 50f, 3f); line(81f toO 32f, 86f toO 50f, 3f)
+            }
+            // Back to the map: a little house.
+            "home" -> {
+                drawPath(Path().apply { moveTo(16f, 50f); lineTo(50f, 20f); lineTo(84f, 50f) }, color, style = Stroke(7f, cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+                drawRoundRect(color, Offset(26f, 46f), Size(48f, 38f), CornerRadius(6f), style = stroke)
+                drawRoundRect(color, Offset(43f, 62f), Size(14f, 22f), CornerRadius(4f))
+            }
+            // Pause: two rounded bars.
+            "pause" -> {
+                drawRoundRect(color, Offset(28f, 22f), Size(16f, 56f), CornerRadius(8f))
+                drawRoundRect(color, Offset(56f, 22f), Size(16f, 56f), CornerRadius(8f))
+            }
         }
         drawContext.canvas.restore()
     }
 }
 private infix fun Float.toO(y: Float) = Offset(this,y)
+
+/** A five-point star around [center] with outer radius [r]. */
+fun starPath(center: Offset, r: Float): Path = Path().apply {
+    for (i in 0 until 10) {
+        val a = i * PI / 5 - PI / 2
+        val k = if (i % 2 == 0) r else r * .48f
+        val x = center.x + (cos(a) * k).toFloat(); val y = center.y + (sin(a) * k).toFloat()
+        if (i == 0) moveTo(x, y) else lineTo(x, y)
+    }
+    close()
+}

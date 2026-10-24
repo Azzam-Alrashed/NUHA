@@ -26,6 +26,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nuha.app.DraftArabic
+import com.nuha.app.Pending
 import com.nuha.app.audio.rememberEffects
 import com.nuha.app.audio.rememberSpeech
 import com.nuha.app.ui.identity.ChunkySurface
@@ -38,8 +40,8 @@ import com.nuha.app.ui.theme.titleWeight
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private const val QUESTIONS_PROMPT = "أسئلة للكبار"
-private const val RESULT_PROMPT = "وجدنا البداية!"
+@DraftArabic private const val QUESTIONS_PROMPT = "أسئلة للكبار"
+@DraftArabic private const val RESULT_PROMPT = "وجدنا البداية!"
 /** Pause after an answer so the grown-up sees it selected before the next question slides in. */
 private const val ADVANCE_DELAY_MILLIS = 350L
 
@@ -76,7 +78,7 @@ fun QuestionsScreen(model: OnboardingViewModel, onBack: () -> Unit, onFinish: ()
 private fun QuestionCard(model: OnboardingViewModel, index: Int, onAnswer: (Answer) -> Unit) {
     val c = LocalIdentity.current
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text("السؤال ${index + 1} من ${Questions.size}", style = MaterialTheme.typography.titleMedium.labelWeight(), color = c.ink)
+        Text("السؤال ${Pending.numeral(index + 1)} من ${Pending.numeral(Questions.size)}", style = MaterialTheme.typography.titleMedium.labelWeight(), color = c.ink)
         // One segment per question: answered ones filled, the current one wider.
         Row(Modifier.clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             for (i in Questions.indices) Box(

@@ -1,5 +1,7 @@
 package com.nuha.app.onboarding
 
+import com.nuha.app.DraftArabic
+import com.nuha.app.Pending
 import com.nuha.app.ui.identity.Hue
 import com.nuha.app.ui.identity.IdentityPalette
 
@@ -13,6 +15,7 @@ class Question(val text: String, val area: Area)
  * reworded so "yes" always means "this is harder for my child". Placeholder wording: it needs specialist and
  * native-speaker review before use with families.
  */
+@DraftArabic
 val Questions = listOf(
     Question("هل يصعب على طفلك الاستجابة عندما يُنادى باسمه أو يُكلَّم؟", Area.Communication),
     Question("هل يتجنّب طفلك النظر في العينين أثناء اللعب أو الحديث؟", Area.Communication),
@@ -56,7 +59,7 @@ fun startPathFor(answers: List<Answer?>): StartPath {
         asked.sumOf { answers.getOrNull(it)?.weight ?: 0 } / (2f * asked.size)
     }.entries.sortedByDescending { it.value }
     val (lead, next) = scores[0] to scores[1]
-    if (lead.value < .5f || lead.value - next.value < .15f) return StartPath.Mixed
+    if (lead.value < Pending.PathLeadMin || lead.value - next.value < Pending.PathLeadMargin) return StartPath.Mixed
     return when (lead.key) {
         Area.Communication -> StartPath.Communication
         Area.Attention -> StartPath.Attention
