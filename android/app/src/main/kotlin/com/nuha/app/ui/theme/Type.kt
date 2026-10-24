@@ -21,19 +21,17 @@ private val BaseTypography = Typography(
     labelLarge = TextStyle(fontSize = 20.sp, lineHeight = 28.sp, fontWeight = FontWeight.SemiBold),
 )
 
-// Readex Pro is a variable font. Each weight gets its own wght axis value; without that, Android fakes
-// heavier weights from the regular instance. The axis stops at 700, so ExtraBold and Black render at 700
-// until a heavier face is bundled.
-private const val READEX_MAX_WEIGHT = 700
-private fun readex(weight: FontWeight) = Font(
-    com.nuha.app.R.font.readex_pro,
-    weight,
-    variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight.coerceAtMost(READEX_MAX_WEIGHT))),
-)
-private val ArabicFamily = FontFamily(
-    listOf(FontWeight.Normal, FontWeight.Medium, FontWeight.SemiBold, FontWeight.Bold, FontWeight.ExtraBold, FontWeight.Black).map(::readex),
-)
-private fun TextStyle.arabic() = copy(fontFamily = ArabicFamily, letterSpacing = 0.sp)
+// Both faces are variable fonts. Each weight gets its own wght axis value; without that, Android fakes
+// heavier weights from the regular instance. Weights above an axis maximum render at that maximum.
+private val Weights = listOf(FontWeight.Normal, FontWeight.Medium, FontWeight.SemiBold, FontWeight.Bold, FontWeight.ExtraBold, FontWeight.Black)
+private fun variableFamily(res: Int, maxWeight: Int) = FontFamily(Weights.map { weight ->
+    Font(res, weight, variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight.coerceAtMost(maxWeight))))
+})
+
+// Baloo Bhaijaan 2 (400–800) is the rounded interface face from docs/research/ui-style.md (Typography);
+// Black renders at ExtraBold. Readex Pro (to 700) stays bundled until the on-device harakat test decides between them.
+private val InterfaceFamily = variableFamily(com.nuha.app.R.font.baloo_bhaijaan_2, 800)
+private fun TextStyle.arabic() = copy(fontFamily = InterfaceFamily, letterSpacing = 0.sp)
 internal val NuhaTypography = Typography(
     displaySmall = BaseTypography.displaySmall.arabic().copy(fontSize = 44.sp, lineHeight = 66.sp),
     headlineMedium = BaseTypography.headlineMedium.arabic(),
@@ -48,8 +46,8 @@ internal val NuhaTypography = Typography(
     labelSmall = BaseTypography.labelSmall.arabic(),
 )
 
-// Playful Soft-Flat weights (docs/research/ui-style.md, Typography). Applied per screen rather than in the
-// scale above, so the lab screens keep their weights. Line heights and zero letter-spacing are unchanged.
+// Playful Soft-Flat weights (docs/research/ui-style.md, Typography), applied per screen.
+// Line heights and zero letter-spacing are unchanged.
 /** Screen titles: Black from 24sp; ExtraBold below that, where Black closes small Arabic counters. */
 fun TextStyle.titleWeight() = copy(fontWeight = if (fontSize.isSp && fontSize.value >= 24f) FontWeight.Black else FontWeight.ExtraBold)
 /** Buttons. */

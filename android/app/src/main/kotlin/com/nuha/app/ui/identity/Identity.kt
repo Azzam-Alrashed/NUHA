@@ -1,6 +1,7 @@
 package com.nuha.app.ui.identity
 
 import android.os.SystemClock
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -40,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.sp
 import kotlin.math.*
+import kotlinx.coroutines.launch
 
 /** One candy hue in the five roles of docs/research/ui-style.md (Palette). */
 @Immutable
@@ -53,6 +55,18 @@ data class Hue(
     val onFillLargeOnly: Boolean = false,
 )
 
+/** Colours of an illustrated scene (the road), kept apart from the hues so each mode can calm it separately. */
+@Immutable
+data class Scene(
+    val ground: Color,
+    val glow: Color,
+    val road: Color,
+    val dash: Color,
+    val tileLip: Color,
+    val gate: Color,
+    val gateIcon: Color,
+)
+
 /**
  * Brand tokens shared by illustrations and onboarding components.
  * tools/android/check_identity.py checks every text and boundary pair in all three modes.
@@ -61,6 +75,7 @@ data class Hue(
 data class IdentityPalette(
     val ink: Color,
     val paper: Color,
+    val scene: Scene,
     val amethyst: Hue,
     val slateBlue: Hue,
     val summerSky: Hue,
@@ -92,6 +107,8 @@ private fun hue(fill: Long, lip: Long, onFill: Long, deep: Long, tint: Long, lar
 private val Colourful = IdentityPalette(
     ink = Color(0xFF1E2A4A),
     paper = Color(0xFFFFF8EE),
+    // Sunny ground of the Ladybug road on the moodboard.
+    scene = Scene(Color(0xFFFFD866), Color(0xFFFFE08A), Color(0xFFFFEDB0), Color.White, Color(0xFFEADBA8), Color.White.copy(alpha = .6f), Color(0xFF9C6D34)),
     amethyst = hue(0xFF9956DE, 0xFF7340A6, WHITE, 0xFF9755DC, 0xFFEBDDF8, largeOnly = true),
     slateBlue = hue(0xFF7274ED, 0xFF5657B2, WHITE, 0xFF686AD8, 0xFFE3E3FB, largeOnly = true),
     summerSky = hue(0xFF1FA7E1, 0xFF1D9ACF, INK, 0xFF187FAB, 0xFFD2EDF9),
@@ -104,6 +121,7 @@ private val Colourful = IdentityPalette(
 
 // Each fill moved 55% toward its tint (sRGB mix); lips, deep shades and tints unchanged; ink text on every fill.
 private val Muted = Colourful.copy(
+    scene = Scene(Color(0xFFFFEDBE), Color(0xFFFFF3D6), Color(0xFFFFF8E8), Color.White, Color(0xFFE6DCC0), Color.White.copy(alpha = .7f), Color(0xFF9C6D34)),
     amethyst = hue(0xFFC6A0EC, 0xFF7340A6, INK, 0xFF9755DC, 0xFFEBDDF8),
     slateBlue = hue(0xFFB0B1F5, 0xFF5657B2, INK, 0xFF686AD8, 0xFFE3E3FB),
     summerSky = hue(0xFF81CEEE, 0xFF1D9ACF, INK, 0xFF187FAB, 0xFFD2EDF9),
@@ -118,6 +136,7 @@ private val Muted = Colourful.copy(
 private val HighContrast = IdentityPalette(
     ink = Color(0xFF1E2A4A),
     paper = Color(0xFFFFFFFF),
+    scene = Scene(Color.White, Color.White, Color(0xFFE4E7EE), Color(0xFF1E2A4A), Color(0xFF1E2A4A), Color(0xFFE4E7EE), Color(0xFF1E2A4A)),
     amethyst = hue(0xFF9755DC, INK, WHITE, 0xFF9755DC, WHITE),
     slateBlue = hue(0xFF686AD8, INK, WHITE, 0xFF686AD8, WHITE),
     summerSky = hue(0xFF187FAB, INK, WHITE, 0xFF187FAB, WHITE),
@@ -298,22 +317,7 @@ fun NuhaIllustration(kind: String, modifier: Modifier = Modifier, description: S
         fun closedEye(x: Float, y: Float) { drawArc(c.ink, 20f, 140f, false, Offset(x-13,y-9), Size(26f,16f), style = Stroke(4.5f, cap = StrokeCap.Round)) }
         fun body(path: Path, h: Hue, top: Float, bottom: Float) = drawPath(path, Brush.verticalGradient(listOf(h.fill.lifted(c.lift), h.fill), top, bottom))
         when (kind) {
-            // Lead mascot: the flower guide.
-            "guide" -> {
-                val h = c.guide
-                groundShadow(h.lip, 150f toO 266f, 190f)
-                line(122f toO 211f,106f toO 260f,h.lip,13f); line(177f toO 211f,194f toO 260f,h.lip,13f)
-                line(106f toO 260f,88f toO 260f,h.lip,13f); line(194f toO 260f,212f toO 260f,h.lip,13f)
-                line(74f toO 160f,40f toO 186f,h.lip,11f); line(226f toO 152f,258f toO 118f,h.lip,11f)
-                val flower = Path().apply {
-                    for(i in 0..360) { val a=i*PI/180; val r=78+16*cos(5*a); val x=150+(r*cos(a)).toFloat(); val y=128+(r*sin(a)).toFloat(); if(i==0) moveTo(x,y) else lineTo(x,y) }; close()
-                }
-                body(flower, h, 34f, 222f)
-                drawCircle(h.tint.copy(alpha = .2f), 46f, 150f toO 132f)
-                eye(130f,119f); eye(170f,119f); smile(150f,156f)
-                drawCircle(h.lip.copy(alpha=.45f),10f,104f toO 151f); drawCircle(h.lip.copy(alpha=.45f),10f,196f toO 151f)
-            }
-            // Activity mascots: one shape character per activity, in that activity's hue.
+            // Activity mascots (the lead guide is NuhaGuide): one shape character per activity, in that activity's hue.
             "mascot-matching" -> {
                 val h = c.matching
                 groundShadow(h.lip, 150f toO 262f, 210f)
@@ -344,6 +348,58 @@ fun NuhaIllustration(kind: String, modifier: Modifier = Modifier, description: S
                 val p=Path().apply {moveTo(150f,256f);cubicTo(32f,197f,63f,76f,238f,42f);cubicTo(265f,166f,215f,232f,150f,256f);close()}
                 body(p, h, 42f, 256f); line(140f toO 265f,220f toO 77f,h.lip,6f); line(180f toO 172f,130f toO 139f,h.lip,5f)
             }
+        }
+        drawContext.canvas.restore()
+    }
+}
+
+/**
+ * The lead mascot: a five-petal flower with a face and no limbs (ui-style.md, Mascot system), drawn in a
+ * 300×300 content box. [gaze] (-1..1 per axis) moves the pupils so the guide looks at what it is pointing to.
+ * A tap hops the flower off its shadow and calls [onTap]; under reduced motion it only calls [onTap].
+ */
+@Composable
+fun NuhaGuide(modifier: Modifier = Modifier, gaze: Offset = Offset.Zero, description: String? = null, onTap: (() -> Unit)? = null) {
+    val c = LocalIdentity.current
+    val reducedMotion = LocalReducedMotion.current
+    var entered by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { entered = true }
+    val reveal by animateFloatAsState(if (entered || reducedMotion) 1f else 0f, tween(if (reducedMotion) 0 else 240), label = "Guide entrance")
+    val hop = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    val tap by rememberUpdatedState(onTap)
+    val tappable = if (onTap == null) Modifier else Modifier
+        .semantics { role = Role.Button; onClick { tap?.invoke(); true } }
+        .pointerInput(reducedMotion) {
+            detectTapGestures(onPress = {
+                if (!reducedMotion && !hop.isRunning) scope.launch {
+                    hop.animateTo(1f, tween(140))
+                    hop.animateTo(0f, spring(dampingRatio = .45f, stiffness = Spring.StiffnessMediumLow))
+                }
+                tap?.invoke()
+            })
+        }
+    Canvas(modifier.graphicsLayer { alpha = reveal }.then(if (description != null) Modifier.semantics { contentDescription = description } else Modifier).then(tappable)) {
+        val s = min(size.width, size.height) / 300f
+        with(drawContext.canvas) { save(); translate((size.width - 300*s)/2, (size.height - 300*s)/2); scale(s, s) }
+        val h = c.guide
+        groundShadow(h.lip, 150f toO 290f, 210f * (1f - hop.value * .3f))
+        translate(top = -hop.value * 28.dp.toPx() / s) {
+            val flower = Path().apply {
+                for ((x, y, r) in listOf(Triple(150f, 78f, 64f), Triple(226f, 134f, 64f), Triple(198f, 222f, 64f), Triple(102f, 222f, 64f), Triple(74f, 134f, 64f), Triple(150f, 158f, 80f)))
+                    addOval(androidx.compose.ui.geometry.Rect(Offset(x, y), r))
+            }
+            drawPath(flower, Brush.verticalGradient(listOf(h.fill.lifted(c.lift), h.fill), 14f, 286f))
+            val look = Offset(gaze.x.coerceIn(-1f, 1f) * 9f, gaze.y.coerceIn(-1f, 1f) * 9f + 2f)
+            for (x in listOf(124f, 176f)) {
+                drawOval(Color.White, Offset(x - 26f, 112f), Size(52f, 60f))
+                drawCircle(c.ink, 16f, Offset(x, 142f) + look)
+                drawCircle(Color.White, 4.4f, Offset(x + 4f, 136f) + look)
+            }
+            for ((a, b) in listOf((106f toO 112f) to (98f toO 100f), (124f toO 106f) to (124f toO 92f), (142f toO 112f) to (146f toO 100f),
+                (158f toO 112f) to (154f toO 100f), (176f toO 106f) to (176f toO 92f), (194f toO 112f) to (202f toO 100f)))
+                drawLine(c.ink, a, b, 5f, StrokeCap.Round)
+            drawPath(Path().apply { moveTo(138f, 190f); quadraticTo(150f, 202f, 162f, 190f) }, c.ink, style = Stroke(6f, cap = StrokeCap.Round))
         }
         drawContext.canvas.restore()
     }
