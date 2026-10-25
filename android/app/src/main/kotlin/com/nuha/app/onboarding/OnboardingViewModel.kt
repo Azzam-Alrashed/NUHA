@@ -31,6 +31,7 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
 
     val childReady get() = avatar != null && name.isNotBlank()
     val path get() = startPathFor(answers)
+    val signs get() = signsFor(answers)
 
     /** Saves the child with the settings of [sensory], a sensory starting point (FR-SET-005); [onSaved] gets their id. */
     fun save(sensory: String, onSaved: (Long) -> Unit) {

@@ -31,6 +31,12 @@ object Pending {
     /** ...and is at least this far ahead of the next area; otherwise the path is mixed. */
     const val PathLeadMargin = .15f
 
+    /**
+     * PLACEHOLDER (needs specialist review): the result screen names a condition's commonly associated signs when the
+     * answers show at least this share of them (autism 4 of 8, ADHD 2 of 3, learning difficulties 1 of 1).
+     */
+    const val ConditionSignsMin = .5f
+
     /** PLACEHOLDER OI-19 (session length): star slots on the token board, within the 3–5 of FR-RWD-001. */
     const val TokenSlots = 5
 
